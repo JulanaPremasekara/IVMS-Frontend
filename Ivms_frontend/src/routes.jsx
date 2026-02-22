@@ -7,12 +7,14 @@ import ProcurementLayout from "./pages/ProcurementLayout";
 import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrder";
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
+import Dashboard from "./pages/Dashboard";
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <MainLayout />,
     children: [
+      { index: true, element: <Dashboard/>}, // Default route    
       {
         path: "procurement",
         element: <ProcurementLayout />, // Use the new Layout here
