@@ -1,7 +1,7 @@
 // config/navConfig.js
 import { 
   LayoutGrid, Package, Search, ShoppingCart, 
-  Building2, DollarSign, BarChart3, FileText, Settings 
+  Building2, DollarSign, BarChart3, FileText, Settings,ShieldCheck 
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -19,6 +19,13 @@ export const NAV_ITEMS = [
   { id: 'supplier', icon: Building2, label: 'Supplier Portal', path: '/supplier' },
   { id: 'ledger', icon: DollarSign, label: 'Financial Ledger', path: '/financial-ledger' },
   { id: 'reports', icon: BarChart3, label: 'Financial Reports', path: '/financial-reports' },
-  { id: 'audit', icon: FileText, label: 'Audit Trail', path: '/audit' },
+  {
+    id: 'admin-control',
+    icon: ShieldCheck,
+    label: 'Admin Control',
+    path: '/admin',
+  },
   { id: 'settings', icon: Settings, label: 'System Settings', path: '/user-management' },
+
 ];
+
