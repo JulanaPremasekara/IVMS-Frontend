@@ -8,7 +8,6 @@ import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrd
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
 
-
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -38,9 +37,19 @@ export const router = createBrowserRouter([
             path: "receive-goods", // Matches /procurement/receive-goods
             element: <ProcurementReceiveGoods />
           }
+
         ]
       },
+      {
+        path: "financial-ledger",
+        element: <FinancialLedger />
+      },
+      {
+        path: "financial-reports",
+        element: <FinancialReports />
+      },
       { path: '*', element: <NotFound /> }
+
     ]
   }
 ]);
