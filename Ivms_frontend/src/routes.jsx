@@ -8,6 +8,7 @@ import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrd
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
 
+
 export const router = createBrowserRouter([
   {
     path: '/',
