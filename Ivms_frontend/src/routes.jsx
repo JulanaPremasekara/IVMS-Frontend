@@ -37,6 +37,22 @@ import SalesEngine from "./pages/SalesEngine";
 // Placeholder Pages
 import PlaceholderPage from "./components/PlaceholderPage";
 
+// Admin Control
+import AdminControl from "./pages/Admincontrol";
+
+//User management
+import UserManagement from "./pages/Usermanagement";
+
+//Audit logs
+import AuditLogs from "./pages/Auditlogs";
+
+//Admin operation
+
+import AdminOperations from "./pages/Adminoperations";
+
+//Security Access Control
+import SecurityAccessControl from "./pages/Securityaccesscontrol";
+
 
 export const router = createBrowserRouter([
   {
@@ -113,6 +129,33 @@ export const router = createBrowserRouter([
       },
 
       {
+        path: "admin", // Matches the path in your Sidebar
+        element: <AdminControl />
+      },
+
+      {
+        path: "admin/users", 
+        element: <UserManagement />
+      },
+
+      {
+        path: "admin/audit", 
+        element: <AuditLogs />
+      },
+
+      {
+        path: "admin/operations", 
+        element: <AdminOperations />
+      },
+      {
+        path: "admin/security", 
+        element: <SecurityAccessControl />
+      },
+
+      { path: '*', element: <NotFound /> }
+
+
+
         path: "supplier",
         element: <div className="w-full h-full"><Outlet /></div>, // This allows child routes like /manage to render
         children: [
@@ -170,4 +213,14 @@ export const router = createBrowserRouter([
       { path: '*', element: <NotFound /> }
     ]
   }
+  
+ 
+
+
+    
+
 ]);
+
+
+
+ 
