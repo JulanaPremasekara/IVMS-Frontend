@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Outlet } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import NotFound from "./components/NotFound";
 import ProcurementHub from "./pages/ProcurementHub";
@@ -7,6 +7,13 @@ import ProcurementLayout from "./pages/ProcurementLayout";
 import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrder";
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
+import FinancialLedger from "./pages/FinancialLedger";
+import FinancialReports from "./pages/FinancialReports";
+import SupplierPortal from "./pages/SupplierPortal";
+import ManageVendors from "./pages/ManageVendors";
+import RegisterVendor from "./pages/RegisterVendor";
+import VendorAnalytics from "./pages/VendorAnalytics";
+import VendorDirectory from "./pages/VendorDirectory";
 
 export const router = createBrowserRouter([
   {
@@ -48,7 +55,36 @@ export const router = createBrowserRouter([
         path: "financial-reports",
         element: <FinancialReports />
       },
+
+      {
+        path: "supplier",
+        element: <div className="w-full h-full"><Outlet /></div>, // This allows child routes like /manage to render
+        children: [
+          {
+            index: true, // This is /supplier
+            element: <SupplierPortal />
+          },
+          {
+            path: "manage", // This is /supplier/manage
+            element: <ManageVendors />
+          },
+          { path: "register", 
+            element: <RegisterVendor /> 
+          },
+
+          { path: "analytics", 
+            element: <VendorAnalytics />
+          },
+
+          { path: "directory",
+            element: <VendorDirectory /> }
+
+        ]
+      },
+
       { path: '*', element: <NotFound /> }
+
+      
 
     ]
   }
