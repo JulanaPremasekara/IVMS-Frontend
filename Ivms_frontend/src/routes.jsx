@@ -24,6 +24,12 @@ import InventoryDashboard from "./pages/InventoryDashboard";
 import InventoryHub_Search from "./pages/InventoryHub_Search";
 import DashboardContent from "./pages/DashboardContent";
 
+// Sales Engine
+import SalesEngine from "./pages/SalesEngine";
+
+// Placeholder Pages
+import PlaceholderPage from "./components/PlaceholderPage";
+
 
 export const router = createBrowserRouter([
   {
@@ -98,6 +104,31 @@ export const router = createBrowserRouter([
         path: "financial-reports",
         element: <FinancialReports />
       },
+      {
+        path: "sales",
+        element: <SalesEngine />
+      },
+      {
+        path: "inventory",
+        element: <PlaceholderPage title="Inventory Hub" icon="📦" description="Manage your inventory and stock levels" />
+      },
+      {
+        path: "search",
+        element: <PlaceholderPage title="Inventory Search" icon="🔍" description="Search and track inventory items" />
+      },
+      {
+        path: "supplier",
+        element: <PlaceholderPage title="Supplier Portal" icon="👥" description="Collaborate with your suppliers" />
+      },
+      {
+        path: "audit",
+        element: <PlaceholderPage title="Audit Trail" icon="📋" description="Monitor system activities and changes" />
+      },
+      {
+        path: "user-management",
+        element: <PlaceholderPage title="System Settings" icon="⚙️" description="Configure system preferences" />
+      },
+      { path: '*', element: <NotFound /> }
 
       // 404 Not Found Handler
       { path: '*', element: <NotFound /> }
