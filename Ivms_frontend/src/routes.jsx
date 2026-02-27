@@ -9,8 +9,6 @@ import ProcurementLayout from "./pages/ProcurementLayout";
 import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrder";
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
-import FinancialLedger from "./pages/FinancialLedger";
-import FinancialReports from "./pages/FinancialReports";
 import SupplierPortal from "./pages/SupplierPortal";
 import ManageVendors from "./pages/ManageVendors";
 import RegisterVendor from "./pages/RegisterVendor";
@@ -152,7 +150,7 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
-      { path: '*', element: <NotFound /> }
+  {
 
 
 
@@ -208,9 +206,6 @@ export const router = createBrowserRouter([
       { path: '*', element: <NotFound /> }
 
       
-
-      // 404 Not Found Handler
-      { path: '*', element: <NotFound /> }
     ]
   }
   
