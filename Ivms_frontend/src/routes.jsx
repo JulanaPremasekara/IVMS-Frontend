@@ -152,6 +152,9 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
+  {
+
+
       {
 
         path: "supplier",

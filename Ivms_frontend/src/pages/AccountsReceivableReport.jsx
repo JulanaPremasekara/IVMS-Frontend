@@ -1,9 +1,90 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     TrendingUp, FileText, Clock, CheckCircle, Users, Eye, FileSpreadsheet
 } from 'lucide-react';
+import TransactionModal from './TransactionModal';
+
+const arTransactions = [
+  {
+    id: "INV-2026-001",
+    order: "SO-1045",
+    party: "Acme Corporation",
+    type: "Revenue",
+    category: "Product Sales",
+    amount: 54900,
+    status: "Paid",
+    date: "2026-02-18",
+  },
+  {
+    id: "EXP-2026-045",
+    order: "PO-2089",
+    party: "TechSupply Co.",
+    type: "Expense",
+    category: "Procurement",
+    amount: 34200,
+    status: "Pending",
+    date: "2026-02-19",
+  },
+  {
+    id: "INV-2026-002",
+    order: "SO-1046",
+    party: "Global Enterprises Ltd.",
+    type: "Revenue",
+    category: "Product Sales",
+    amount: 74880,
+    status: "Pending",
+    date: "2026-02-20",
+  },
+  {
+    id: "EXP-2026-046",
+    order: "PO-2090",
+    party: "QuickShip Electronics",
+    type: "Expense",
+    category: "Procurement",
+    amount: 22500,
+    status: "Paid",
+    date: "2026-02-21",
+  },
+  {
+    id: "INV-2026-003",
+    order: "SO-1047",
+    party: "SmartTech Solutions",
+    type: "Revenue",
+    category: "Product Sales",
+    amount: 39840,
+    status: "Paid",
+    date: "2026-02-21",
+  },
+];
+
+// Total Outstanding Receivables (Pending Revenue)
+const totalOutstandingReceivables = arTransactions
+  .filter(t => t.type === "Revenue" && t.status === "Pending")
+  .reduce((sum, t) => sum + t.amount, 0);
+
+// Collected Revenue (Paid Revenue)
+const collectedRevenue = arTransactions
+  .filter(t => t.type === "Revenue" && t.status === "Paid")
+  .reduce((sum, t) => sum + t.amount, 0);
+
+// Active Customers (unique customers with pending revenue)
+const activeCustomers = new Set(
+  arTransactions
+    .filter(t => t.type === "Revenue" && t.status === "Pending")
+    .map(t => t.party)
+).size;
+
+// Optional: collection rate
+const totalRevenue =
+  totalOutstandingReceivables + collectedRevenue;
+
+const collectionRate =
+  totalRevenue === 0
+    ? 0
+    : ((collectedRevenue / totalRevenue) * 100).toFixed(1);
 
 const AccountsReceivableContent = () => {
+    const [selectedReport, setSelectedReport] = useState(null); // Modal State
     return (
         <>
             {/* AR Specific Summary Cards */}
@@ -11,31 +92,33 @@ const AccountsReceivableContent = () => {
                 <ARSummaryCard
                     icon={<Clock className="text-blue-500" size={18} />}
                     label="Total Outstanding Receivables"
-                    amount="$74,880.00"
+                    amount={`$${totalOutstandingReceivables.toLocaleString()}.00`}
                     subtext="Pending customer payments"
                     color="blue"
-                />
-                <ARSummaryCard
+                    />
+
+                    <ARSummaryCard
                     icon={<CheckCircle className="text-green-500" size={18} />}
                     label="Collected Revenue"
-                    amount="$94,740.00"
-                    subtext="55.9% collection rate"
+                    amount={`$${collectedRevenue.toLocaleString()}.00`}
+                    subtext={`${collectionRate}% collection rate`}
                     color="green"
-                />
-                <ARSummaryCard
+                    />
+
+                    <ARSummaryCard
                     icon={<Users className="text-teal-500" size={18} />}
                     label="Active Customers"
-                    amount="3"
+                    amount={activeCustomers.toString()}
                     subtext="Customers with pending invoices"
                     color="teal"
-                />
+                    />
             </div>
 
             {/* Detailed Transactions Table */}
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="p-5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
                     <FileSpreadsheet size={18} className="text-slate-400" />
-                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Detailed Transactions (8)</h4>
+                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Detailed Transactions ({arTransactions.length})</h4>
                 </div>
                 <table className="w-full text-left text-sm">
                     <thead className="bg-white text-slate-400 uppercase text-[10px] font-bold tracking-wider">
@@ -52,14 +135,22 @@ const AccountsReceivableContent = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        <ARRow id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" cat="Product Sales" amt="54,900.00" status="Paid" date="2026-02-18" />
-                        <ARRow id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" cat="Procurement" amt="34,200.00" status="Pending" date="2026-02-19" />
-                        <ARRow id="INV-2026-002" order="SO-1046" party="Global Enterprises Ltd." type="Revenue" cat="Product Sales" amt="74,880.00" status="Pending" date="2026-02-20" />
-                        <ARRow id="EXP-2026-046" order="PO-2090" party="QuickShip Electronics" type="Expense" cat="Procurement" amt="22,500.00" status="Paid" date="2026-02-20" />
-                        <ARRow id="INV-2026-003" order="SO-1047" party="SmartTech Solutions" type="Revenue" cat="Product Sales" amt="39,840.00" status="Paid" date="2026-02-21" />
+                        <ARRow onView={(data) => setSelectedReport(data)} id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" cat="Product Sales" amt="54,900.00" status="Paid" date="2026-02-18" />
+                        <ARRow onView={(data) => setSelectedReport(data)} id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" cat="Procurement" amt="34,200.00" status="Pending" date="2026-02-19" />
+                        <ARRow onView={(data) => setSelectedReport(data)} id="INV-2026-002" order="SO-1046" party="Global Enterprises Ltd." type="Revenue" cat="Product Sales" amt="74,880.00" status="Pending" date="2026-02-20" />
+                        <ARRow onView={(data) => setSelectedReport(data)} id="EXP-2026-046" order="PO-2090" party="QuickShip Electronics" type="Expense" cat="Procurement" amt="22,500.00" status="Paid" date="2026-02-21" />
+                        <ARRow onView={(data) => setSelectedReport(data)} id="INV-2026-003" order="SO-1047" party="SmartTech Solutions" type="Revenue" cat="Product Sales" amt="39,840.00" status="Paid" date="2026-02-21" />
                     </tbody>
                 </table>
             </div>
+            {/* Modal Logic (One place) */}
+                {selectedReport && (
+                    <TransactionModal 
+                    isOpen={true} 
+                    data={selectedReport} 
+                    onClose={() => setSelectedReport(null)} 
+                    />
+                )}
         </>
     );
 };
@@ -80,7 +171,7 @@ const ARSummaryCard = ({ icon, label, amount, subtext, color }) => (
     </div>
 );
 
-const ARRow = ({ id, order, party, type, cat, amt, status, date }) => (
+const ARRow = ({ id, order, party, type, cat, amt, status, date, onView }) => (
     <tr className="hover:bg-slate-50 transition-colors">
         <td className="px-6 py-4 font-medium text-blue-600">{id}</td>
         <td className="px-6 py-4 text-slate-500 font-medium">{order}</td>
@@ -100,7 +191,8 @@ const ARRow = ({ id, order, party, type, cat, amt, status, date }) => (
         </td>
         <td className="px-6 py-4 text-slate-500 text-xs tabular-nums">{date}</td>
         <td className="px-6 py-4 text-right">
-            <button className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all">
+            <button 
+            onClick={() => onView({ id, order, party, type, category:cat, amount:amt, status, date })} className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all">
                 <Eye size={12} /> View
             </button>
         </td>

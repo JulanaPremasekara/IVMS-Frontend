@@ -90,7 +90,7 @@ const TransactionDetailsModal = ({ isOpen, onClose, data }) => {
               <tbody className="divide-y divide-slate-50">
                 {/* Sample items - usually these would come from your data prop */}
                 <TableRow sku="LAP-DEL-XPS15" item="Dell XPS 15 Laptop" qty={15} price="1,850.00" subtotal="27,750.00" />
-                <TableRow sku="MON-LG-27UK" item="LG 27\" 4K Monitor" qty={30} price="450.00" subtotal="13,500.00" />
+                <TableRow sku="MON-LG-27UK" item='LG 27" 4K Monitor' qty={30} price="450.00" subtotal="13,500.00" />
               </tbody>
             </table>
           </section>
