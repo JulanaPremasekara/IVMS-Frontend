@@ -9,8 +9,6 @@ import ProcurementLayout from "./pages/ProcurementLayout";
 import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrder";
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
-import FinancialLedger from "./pages/FinancialLedger";
-import FinancialReports from "./pages/FinancialReports";
 import SupplierPortal from "./pages/SupplierPortal";
 import ManageVendors from "./pages/ManageVendors";
 import RegisterVendor from "./pages/RegisterVendor";
@@ -22,6 +20,7 @@ import InventoryHub from "./pages/InventoryHub";
 import InventoryHub_Register from "./pages/InventoryHub_Register"; // UC-101
 import InventoryHub_Modify from "./pages/InventoryHub_Modify";     // UC-103
 import InventoryHub_Archive from "./pages/InventoryHub_Archive";   // UC-104
+
 
 
 // --- Financial Pages ---
@@ -59,6 +58,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <MainLayout />,
     children: [
+      // { index: true, element: <Dashboard/>}, // Default route    
       {
   path: "inventory",
   element: <InventoryDashboard />,
@@ -152,9 +152,7 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
-      { path: '*', element: <NotFound /> }
-
-
+      {
 
         path: "supplier",
         element: <div className="w-full h-full"><Outlet /></div>, // This allows child routes like /manage to render
@@ -208,9 +206,6 @@ export const router = createBrowserRouter([
       { path: '*', element: <NotFound /> }
 
       
-
-      // 404 Not Found Handler
-      { path: '*', element: <NotFound /> }
     ]
   }
   
