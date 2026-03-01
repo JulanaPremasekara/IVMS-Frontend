@@ -9,8 +9,6 @@ import ProcurementLayout from "./pages/ProcurementLayout";
 import ProcurementCreatePurchaseOrder from "./pages/ProcurementCreatePurchaseOrder";
 import ProcurementManagePurchaseOrders from "./pages/ProcurementManagePurchaseOrders";
 import ProcurementReceiveGoods from "./pages/ProcurementReceiveGoods";
-import FinancialLedger from "./pages/FinancialLedger";
-import FinancialReports from "./pages/FinancialReports";
 import SupplierPortal from "./pages/SupplierPortal";
 import ManageVendors from "./pages/ManageVendors";
 import RegisterVendor from "./pages/RegisterVendor";
@@ -152,10 +150,7 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
-      { path: '*', element: <NotFound /> }
-
-
-
+      {
         path: "supplier",
         element: <div className="w-full h-full"><Outlet /></div>, // This allows child routes like /manage to render
         children: [
@@ -205,9 +200,7 @@ export const router = createBrowserRouter([
         path: "user-management",
         element: <PlaceholderPage title="System Settings" icon="⚙️" description="Configure system preferences" />
       },
-      { path: '*', element: <NotFound /> }
 
-      
 
       // 404 Not Found Handler
       { path: '*', element: <NotFound /> }

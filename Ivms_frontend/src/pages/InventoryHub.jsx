@@ -1,7 +1,9 @@
 import React from 'react';
 import { Edit, Plus, Archive, Search } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 const InventoryHub = () => {
+  const navigate = useNavigate(); 
   const products = [
     { sku: "SKU-1001", name: "Samsung French Door Refrigerator", category: "Refrigerators", stock: "45 units", price: "$1299.99", status: "In Stock" },
     { sku: "SKU-1002", name: "LG Front Load Washing Machine", category: "Washing Machines", stock: "8 units", price: "$899.99", status: "Low Stock" },
@@ -13,9 +15,18 @@ const InventoryHub = () => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold text-gray-900">Inventory Hub</h1>
         <div className="flex space-x-3">
-          <button className="flex items-center px-4 py-2 bg-[#5fb368] text-white rounded-lg font-semibold"><Edit size={16} className="mr-2"/> Modify Stock</button>
-          <button className="flex items-center px-4 py-2 bg-[#4c6ef5] text-white rounded-lg font-semibold"><Plus size={16} className="mr-2"/> Register New SKU</button>
-          <button className="flex items-center px-4 py-2 bg-[#d9822b] text-white rounded-lg font-semibold"><Archive size={16} className="mr-2"/> Archive Product</button>
+
+          <button onClick={() => navigate("/inventory/modify")}className="flex items-center px-4 py-2 bg-[#5fb368] text-white rounded-lg font-semibold"
+>          <Edit size={16} className="mr-2"/> Modify Stock</button>
+          <button onClick={() => navigate('/inventory/register')} // This is the fix
+            className="flex items-center px-4 py-2 bg-[#4c6ef5] text-white rounded-lg font-semibold hover:opacity-90 transition-all"
+>          <Plus size={16} className="mr-2"/> Register New SKU
+        </button>
+        <button onClick={() => navigate('/inventory/archive')} 
+        className="flex items-center px-4 py-2 bg-[#d9822b] text-white rounded-lg font-semibold"
+      >
+        <Archive size={16} className="mr-2"/> Archive Product
+      </button>
         </div>
       </div>
 
