@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronRight, Search } from 'lucide-react';
+import BackButton from "../components/ui/BackButton";
 
 const InventoryHub_Modify = () => {
   return (
@@ -9,6 +10,7 @@ const InventoryHub_Modify = () => {
         <ChevronRight size={16} className="mx-2" />
         <span className="text-gray-800">Edit SKU</span>
       </nav>
+      <BackButton />
 
       <h1 className="text-4xl font-bold text-gray-900 mb-2">Modify Stock & Safety Thresholds</h1>
       <p className="text-gray-500 text-lg mb-10 font-medium">Adjust stock counts and safety thresholds for inventory management</p>

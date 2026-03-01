@@ -1,14 +1,17 @@
 import React from 'react';
 import { Search, ChevronRight } from 'lucide-react';
+import BackButton from "../components/ui/BackButton";
 
 const InventoryHub_Archive = () => {
   return (
+    
     <div className="p-8 bg-gray-50 min-h-screen">
       <nav className="flex items-center text-sm text-gray-500 mb-4">
         <span>Inventory Hub</span> <ChevronRight size={14} className="mx-2" /> 
         <span>Manage Products</span> <ChevronRight size={14} className="mx-2" />
         <span className="text-gray-800 font-medium">Archive</span>
       </nav>
+      <BackButton />
 
       <h1 className="text-4xl font-bold text-gray-900 mb-2">Archive / Discontinue Product</h1>
       <p className="text-gray-500 mb-8">Soft delete process for discontinued products</p>

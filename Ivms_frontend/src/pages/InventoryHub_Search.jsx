@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Mic, ChevronDown, ChevronRight } from 'lucide-react';
+import BackButton from "../components/ui/BackButton";
 
 const InventoryHub_Search = () => {
   return (
@@ -10,6 +11,7 @@ const InventoryHub_Search = () => {
         <ChevronRight size={16} className="mx-2" />
         <span className="text-gray-800">Search Inventory</span>
       </nav>
+      <BackButton />
 
       <h1 className="text-4xl font-bold text-gray-900 mb-2">Search Inventory</h1>
       <p className="text-gray-500 text-lg mb-10 font-medium">Real-Time Stock Availability</p>

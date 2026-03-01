@@ -2,6 +2,7 @@ import React from 'react';
 import { LayoutDashboard, Search, Box, LineChart, Truck, ClipboardList, User } from 'lucide-react';
 import DashboardContent from './DashboardContent';
 import { Outlet } from 'react-router-dom';
+import BackButton from "../components/ui/BackButton";
 
 const NavItem = ({ icon: Icon, label, active }) => (
   <div className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${active ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:bg-slate-800'}`}>
@@ -13,6 +14,7 @@ const NavItem = ({ icon: Icon, label, active }) => (
 const InventoryDashboard = () => {
   return (
     <div className="flex min-h-screen bg-white">
+      
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
