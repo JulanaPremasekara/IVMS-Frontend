@@ -1,9 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     FileSpreadsheet, TrendingUp, FileText, DollarSign, Target, Hash, Eye
 } from 'lucide-react';
+import TransactionModal from './TransactionModal';
+
 
 const SalesRevenueContent = () => {
+    const [selectedReport, setSelectedReport] = useState(null); // Modal State
+
+    const salesTransactions = [
+    { id: "INV-2026-001", order: "SO-1045", party: "Acme Corporation", type: "Revenue", category: "Product Sales", amount: 54900, status: "Paid", date: "2026-02-18" },
+    { id: "EXP-2026-045", order: "PO-2089", party: "TechSupply Co.", type: "Expense", category: "Procurement", amount: 34200, status: "Pending", date: "2026-02-19" },
+    { id: "INV-2026-002", order: "SO-1046", party: "Global Enterprises Ltd.", type: "Revenue", category: "Product Sales", amount: 74880, status: "Pending", date: "2026-02-20" },
+    { id: "EXP-2026-046", order: "PO-2090", party: "QuickShip Electronics", type: "Expense", category: "Procurement", amount: 22500, status: "Paid", date: "2026-02-21" },
+    { id: "INV-2026-003", order: "SO-1047", party: "SmartTech Solutions", type: "Revenue", category: "Product Sales", amount: 39840, status: "Paid", date: "2026-02-21" },
+    ];
+
+    const revenueTransactions = salesTransactions.filter(t => t.type === "Revenue");
+
+    const totalRevenue = revenueTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+    const averageOrderValue = revenueTransactions.length > 0
+    ? Math.round(totalRevenue / revenueTransactions.length)
+    : 0;
+
+    const totalInvoices = revenueTransactions.length;
+
     return (
         <>
             {/* Sales Specific Summary Cards */}
@@ -11,32 +33,34 @@ const SalesRevenueContent = () => {
                 <SalesSummaryCard
                     icon={<DollarSign className="text-green-600" size={18} />}
                     label="Total Revenue"
-                    amount="$169,620.00"
+                    amount={`$${totalRevenue.toLocaleString()}.00`}
                     subtext="+15.3% from last period"
                     color="green"
                     trend="up"
-                />
-                <SalesSummaryCard
+                    />
+
+                    <SalesSummaryCard
                     icon={<Target className="text-blue-500" size={18} />}
                     label="Average Order Value"
-                    amount="$56,540.00"
+                    amount={`$${averageOrderValue.toLocaleString()}.00`}
                     subtext="Per transaction"
                     color="blue"
-                />
-                <SalesSummaryCard
+                    />
+
+                    <SalesSummaryCard
                     icon={<Hash className="text-purple-500" size={18} />}
                     label="Total Invoices"
-                    amount="3"
+                    amount={totalInvoices.toString()}
                     subtext="Issued this period"
                     color="purple"
-                />
+                    />
             </div>
 
             {/* Detailed Transactions Table */}
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="p-5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
                     <FileSpreadsheet size={18} className="text-slate-400" />
-                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Detailed Transactions (8)</h4>
+                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Detailed Transactions ({salesTransactions.length})</h4>
                 </div>
                 <table className="w-full text-left text-sm">
                     <thead className="bg-white text-slate-400 uppercase text-[10px] font-bold tracking-wider">
@@ -53,14 +77,22 @@ const SalesRevenueContent = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        <SalesRow id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" cat="Product Sales" amt="54,900.00" status="Paid" date="2026-02-18" />
-                        <SalesRow id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" cat="Procurement" amt="34,200.00" status="Pending" date="2026-02-19" />
-                        <SalesRow id="INV-2026-002" order="SO-1046" party="Global Enterprises Ltd." type="Revenue" cat="Product Sales" amt="74,880.00" status="Pending" date="2026-02-20" />
-                        <SalesRow id="EXP-2026-046" order="PO-2090" party="QuickShip Electronics" type="Expense" cat="Procurement" amt="22,500.00" status="Paid" date="2026-02-20" />
-                        <SalesRow id="INV-2026-003" order="SO-1047" party="SmartTech Solutions" type="Revenue" cat="Product Sales" amt="39,840.00" status="Paid" date="2026-02-21" />
+                        <SalesRow onView={(data) => setSelectedReport(data)} id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" cat="Product Sales" amt="54,900.00" status="Paid" date="2026-02-18" />
+                        <SalesRow onView={(data) => setSelectedReport(data)} id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" cat="Procurement" amt="34,200.00" status="Pending" date="2026-02-19" />
+                        <SalesRow onView={(data) => setSelectedReport(data)} id="INV-2026-002" order="SO-1046" party="Global Enterprises Ltd." type="Revenue" cat="Product Sales" amt="74,880.00" status="Pending" date="2026-02-20" />
+                        <SalesRow onView={(data) => setSelectedReport(data)} id="EXP-2026-046" order="PO-2090" party="QuickShip Electronics" type="Expense" cat="Procurement" amt="22,500.00" status="Paid" date="2026-02-21" />
+                        <SalesRow onView={(data) => setSelectedReport(data)} id="INV-2026-003" order="SO-1047" party="SmartTech Solutions" type="Revenue" cat="Product Sales" amt="39,840.00" status="Paid" date="2026-02-21 " />
                     </tbody>
                 </table>
             </div>
+            {/*Model Logic (One place) */}
+                {selectedReport && (
+                    <TransactionModal 
+                    isOpen={true} 
+                    data={selectedReport} 
+                    onClose={() => setSelectedReport(null)} 
+                    />
+                )}
         </>
     );
 };
@@ -86,7 +118,7 @@ const SalesSummaryCard = ({ icon, label, amount, subtext, color, trend }) => (
     </div>
 );
 
-const SalesRow = ({ id, order, party, type, cat, amt, status, date }) => (
+const SalesRow = ({ id, order, party, type, cat, amt, status, date, onView }) => (
     <tr className="hover:bg-slate-50 transition-colors">
         <td className="px-6 py-4 font-medium text-blue-600">{id}</td>
         <td className="px-6 py-4 text-slate-500 font-medium">{order}</td>
@@ -106,7 +138,8 @@ const SalesRow = ({ id, order, party, type, cat, amt, status, date }) => (
         </td>
         <td className="px-6 py-4 text-slate-500 text-xs tabular-nums">{date}</td>
         <td className="px-6 py-4 text-right">
-            <button className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all">
+            <button 
+            onClick={() => onView({ id, order, party, type, category:cat, amount:amt, status, date })} className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all">
                 <Eye size={12} /> View
             </button>
         </td>
