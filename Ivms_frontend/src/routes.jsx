@@ -22,6 +22,7 @@ import InventoryHub_Modify from "./pages/InventoryHub_Modify";     // UC-103
 import InventoryHub_Archive from "./pages/InventoryHub_Archive";   // UC-104
 
 
+
 // --- Financial Pages ---
 import FinancialLedger from "./pages/FinancialLedger";
 import FinancialReports from "./pages/FinancialReports";
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <MainLayout />,
     children: [
+      // { index: true, element: <Dashboard/>}, // Default route    
       {
   path: "inventory",
   element: <InventoryDashboard />,
@@ -150,8 +152,14 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
+<<<<<<< HEAD
       { path: '*', element: <NotFound /> },
+=======
+  {
 
+>>>>>>> f8bd37ddc60d7532f7adc0fe38259607d2c554fc
+
+      {
 
       {
         

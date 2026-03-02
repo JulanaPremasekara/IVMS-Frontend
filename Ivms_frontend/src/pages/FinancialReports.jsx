@@ -14,8 +14,9 @@ import AccountsReceivableContent from './AccountsReceivableReport';
 import SalesRevenueContent from './SalesRevenueReport';
 import PaymentProcessing from './PaymentProcessing';
 import ManageFinancialEntries from './ManageFinancialEntries';
+import TransactionModal from './TransactionModal';
 
-// Sample Data for Charts (Keep if needed for P&L)
+// Sample Data (Moved outside to keep component clean)
 const barData = [
   { name: 'Jan', Revenue: 130000, Expenses: 85000 },
   { name: 'Feb', Revenue: 150000, Expenses: 95000 },
@@ -43,9 +44,47 @@ const lineData = [
   { date: 'Feb 21', Revenue: 70000 },
 ];
 
+const transactions = [
+  {
+    id: "INV-2026-001",
+    type: "Revenue",
+    category: "Product Sales",
+    amount: 54900,
+    status: "Paid",
+    date: "2026-02-18",
+  },
+  {
+    id: "EXP-2026-045",
+    type: "Expense",
+    category: "Procurement",
+    amount: 34200,
+    status: "Pending",
+    date: "2026-02-19",
+  },
+  {
+    id: "EXP-2026-048",
+    type: "Expense",
+    category: "Salaries",
+    amount: 28000,
+    status: "Paid",
+    date: "2026-02-15",
+  },
+];
+
 const FinancialReports = () => {
   const [activeTab, setActiveTab] = useState('Profit & Loss');
-  const [activeSubView, setActiveSubView] = useState(null); // 'payment' or 'void'
+  const [activeSubView, setActiveSubView] = useState(null); 
+  const [selectedReport, setSelectedReport] = useState(null); // Modal State
+  
+  const totalIncome = transactions
+  .filter(t => t.type === "Revenue")
+  .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpenses = transactions
+  .filter(t => t.type === "Expense")
+  .reduce((sum, t) => sum + t.amount, 0);
+
+  const netProfit = totalIncome - totalExpenses;
 
   if (activeSubView === 'payment') {
     return <PaymentProcessing onBack={() => setActiveSubView(null)} />;
@@ -64,9 +103,26 @@ const FinancialReports = () => {
           <p className="text-sm text-slate-500">Monitor financial health and performance</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600">
-            <Calendar size={14} /> Last 30 Days <ArrowDownRight size={14} />
-          </div>
+          <div className="relative flex items-center gap-2 bg-white border border-slate-200 px-2 py-2 rounded-lg text-xs font-semibold text-slate-600 shadow-sm hover:border-slate-300 transition-colors ">
+              {/* Icon stays on the left */}
+              <Calendar size={14} className="text-slate-400" />
+
+                <select className="bg-transparent outline-none appearance-none cursor-pointer pr-5 w-full">
+                  <option>&nbsp;&nbsp;Last 7 Days</option>
+                  <option>&nbsp;&nbsp;Last 30 Days</option>
+                  <option>&nbsp;&nbsp;This Month</option>
+                  <option>&nbsp;&nbsp;Last Month</option>
+                  <option>&nbsp;&nbsp;This Quarter</option>
+                  <option>&nbsp;&nbsp;Custom Range</option>
+                </select>
+
+              {/* Custom Arrow - positioned absolutely so it doesn't move */}
+              <div className="absolute right-3 pointer-events-none text-slate-400">
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 1L5 5L9 1" />
+                </svg>
+              </div>
+            </div>
           <button
             onClick={() => setActiveSubView('payment')}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition-colors"
@@ -89,8 +145,6 @@ const FinancialReports = () => {
         </div>
       </div>
 
-      {/* Tab Navigation and Report Content */}
-      {/* ... (rest of the component) */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 mb-8 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-4">
           <div className="p-2 bg-blue-900 text-white rounded-full">
@@ -106,45 +160,41 @@ const FinancialReports = () => {
 
       {/* Tab Navigation */}
       <div className="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto no-scrollbar">
-        <ReportTab
-          icon={<TrendingUp size={16} />}
-          label="Profit & Loss"
-          active={activeTab === 'Profit & Loss'}
-          onClick={() => setActiveTab('Profit & Loss')}
-        />
-        <ReportTab
-          icon={<Wallet size={16} />}
-          label="Accounts Payable"
-          active={activeTab === 'Accounts Payable'}
-          onClick={() => setActiveTab('Accounts Payable')}
-        />
-        <ReportTab
-          icon={<TrendingUp size={16} />}
-          label="Accounts Receivable"
-          active={activeTab === 'Accounts Receivable'}
-          onClick={() => setActiveTab('Accounts Receivable')}
-        />
-        <ReportTab
-          icon={<FileText size={16} />}
-          label="Sales Revenue"
-          active={activeTab === 'Sales Revenue'}
-          onClick={() => setActiveTab('Sales Revenue')}
-        />
+        <ReportTab icon={<TrendingUp size={16} />} label="Profit & Loss" active={activeTab === 'Profit & Loss'} onClick={() => setActiveTab('Profit & Loss')} />
+        <ReportTab icon={<Wallet size={16} />} label="Accounts Payable" active={activeTab === 'Accounts Payable'} onClick={() => setActiveTab('Accounts Payable')} />
+        <ReportTab icon={<TrendingUp size={16} />} label="Accounts Receivable" active={activeTab === 'Accounts Receivable'} onClick={() => setActiveTab('Accounts Receivable')} />
+        <ReportTab icon={<FileText size={16} />} label="Sales Revenue" active={activeTab === 'Sales Revenue'} onClick={() => setActiveTab('Sales Revenue')} />
       </div>
 
       {/* Conditional Content Rendering */}
       {activeTab === 'Profit & Loss' && (
         <>
-          {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-6 mb-8">
-            <SummaryCard label="Total Income" amount="$169,620.00" trend="+12.5%" color="green" />
-            <SummaryCard label="Total Expenses" amount="$142,140.00" trend="+8.2%" color="orange" />
-            <SummaryCard label="Net Profit" amount="$27,480.00" subtext="Profit Margin: 16.2%" color="green" isPrimary />
+            <SummaryCard
+              label="Total Income"
+              amount={`$${totalIncome.toLocaleString()}.00`}
+              trend="+12.5%"
+              color="green"
+            />
+
+            <SummaryCard
+              label="Total Expenses"
+              amount={`$${totalExpenses.toLocaleString()}.00`}
+              trend="+8.2%"
+              color="orange"
+            />
+
+            <SummaryCard
+              label="Net Profit"
+              amount={`$${netProfit.toLocaleString()}.00`}
+              subtext={`Profit Margin: ${((netProfit / totalIncome) * 100).toFixed(1)}%`}
+              color="green"
+              isPrimary
+            />
           </div>
 
-          {/* Main Charts Grid */}
+          {/* Charts Row */}
           <div className="grid grid-cols-12 gap-6 mb-8">
-            {/* Revenue vs Expenses Bar Chart */}
             <div className="col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp size={18} className="text-slate-400" />
@@ -165,7 +215,6 @@ const FinancialReports = () => {
               </div>
             </div>
 
-            {/* Expense Breakdown Pie Chart */}
             <div className="col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
                 <PieIcon size={18} className="text-slate-400" />
@@ -194,30 +243,11 @@ const FinancialReports = () => {
             </div>
           </div>
 
-          {/* Revenue Trend Line Chart */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp size={18} className="text-slate-400" />
-              <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Revenue Trend (Last 7 Days)</h4>
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="Revenue" stroke="#1e3a8a" strokeWidth={3} dot={{ r: 4, fill: '#1e3a8a' }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Detailed Transactions Table */}
+          {/* Table */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
               <FileSpreadsheet size={18} className="text-slate-400" />
-              <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Detailed Transactions (8)</h4>
+              <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight"><h4>Detailed Transactions ({transactions.length})</h4></h4>
             </div>
             <table className="w-full text-left text-sm">
               <thead className="bg-white text-slate-400 uppercase text-[10px] font-bold tracking-wider">
@@ -234,13 +264,23 @@ const FinancialReports = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                <ReportRow id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" category="Product Sales" amount="54,900.00" status="Paid" date="2026-02-18" />
-                <ReportRow id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" category="Procurement" amount="34,200.00" status="Pending" date="2026-02-19" />
-                <ReportRow id="EXP-2026-048" order="SAL-001" party="Payroll Department" type="Expense" category="Salaries" amount="28,000.00" status="Paid" date="2026-02-15" />
+                {/* Notice 'onView' is passed here */}
+                <ReportRow onView={(data) => setSelectedReport(data)} id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" category="Product Sales" amount="54,900.00" status="Paid" date="2026-02-18" />
+                <ReportRow onView={(data) => setSelectedReport(data)} id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" category="Procurement" amount="34,200.00" status="Pending" date="2026-02-19" />
+                <ReportRow onView={(data) => setSelectedReport(data)} id="EXP-2026-048" order="SAL-001" party="Payroll Department" type="Expense" category="Salaries" amount="28,000.00" status="Paid" date="2026-02-15" />
               </tbody>
             </table>
           </div>
         </>
+      )}
+
+      {/* Modal Logic (One place) */}
+      {selectedReport && (
+        <TransactionModal 
+          isOpen={true} 
+          data={selectedReport} 
+          onClose={() => setSelectedReport(null)} 
+        />
       )}
 
       {activeTab === 'Accounts Payable' && <AccountsPayableContent />}
@@ -250,7 +290,38 @@ const FinancialReports = () => {
   );
 };
 
-// Sub-components
+// Fixed ReportRow component
+const ReportRow = ({ id, order, party, type, category, amount, status, date, onView }) => (
+  <tr className="hover:bg-slate-50 transition-colors">
+    <td className="px-6 py-4 font-medium text-blue-600">{id}</td>
+    <td className="px-6 py-4 text-slate-500 font-medium">{order}</td>
+    <td className="px-6 py-4 font-semibold text-slate-700">{party}</td>
+    <td className="px-6 py-4">
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${type === 'Revenue' ? 'bg-blue-900 text-white' : 'bg-purple-600 text-white'}`}>
+        {type === 'Revenue' ? '↗ Revenue' : '↘ Expense'}
+      </span>
+    </td>
+    <td className="px-6 py-4 text-slate-500">{category}</td>
+    <td className="px-6 py-4 font-bold text-slate-800">${amount}</td>
+    <td className="px-6 py-4">
+      <span className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border ${status === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
+        <div className={`w-1.5 h-1.5 rounded-full ${status === 'Paid' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+        {status}
+      </span>  
+    </td>
+    <td className="px-6 py-4 text-slate-500 text-xs">{date}</td>
+    <td className="px-6 py-4 text-right">
+      <button 
+        onClick={() => onView({ id, order, party, type, category, amount, status, date })} 
+        className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all shadow-sm"
+      >
+        <TrendingUp size={12} /> View
+      </button>
+    </td>
+  </tr>
+);
+
+// Helper Sub-components
 const ReportTab = ({ icon, label, active, onClick }) => (
   <div
     onClick={onClick}
@@ -273,33 +344,6 @@ const SummaryCard = ({ label, amount, trend, subtext, color, isPrimary }) => (
     </div>
     {subtext && <p className="mt-1 text-xs font-bold text-green-700/60 uppercase">{subtext}</p>}
   </div>
-);
-
-const ReportRow = ({ id, order, party, type, category, amount, status, date }) => (
-  <tr className="hover:bg-slate-50 transition-colors">
-    <td className="px-6 py-4 font-medium text-blue-600">{id}</td>
-    <td className="px-6 py-4 text-slate-500 font-medium">{order}</td>
-    <td className="px-6 py-4 font-semibold text-slate-700">{party}</td>
-    <td className="px-6 py-4">
-      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${type === 'Revenue' ? 'bg-blue-900 text-white' : 'bg-purple-600 text-white'}`}>
-        {type === 'Revenue' ? '↗ Revenue' : '↘ Expense'}
-      </span>
-    </td>
-    <td className="px-6 py-4 text-slate-500">{category}</td>
-    <td className="px-6 py-4 font-bold text-slate-800">${amount}</td>
-    <td className="px-6 py-4">
-      <span className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border ${status === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
-        <div className={`w-1.5 h-1.5 rounded-full ${status === 'Paid' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-        {status}
-      </span>
-    </td>
-    <td className="px-6 py-4 text-slate-500 text-xs">{date}</td>
-    <td className="px-6 py-4 text-right">
-      <button className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all shadow-sm">
-        <TrendingUp size={12} /> View
-      </button>
-    </td>
-  </tr>
 );
 
 export default FinancialReports;
