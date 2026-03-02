@@ -152,14 +152,8 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
-<<<<<<< HEAD
       { path: '*', element: <NotFound /> },
-=======
-  {
-
->>>>>>> f8bd37ddc60d7532f7adc0fe38259607d2c554fc
-
-      {
+      
 
       {
         
