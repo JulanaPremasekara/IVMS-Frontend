@@ -175,7 +175,8 @@ export const router = createBrowserRouter([
           },
 
           { path: "directory",
-            element: <VendorDirectory /> }
+            element: <VendorDirectory />
+          },
 
         ]
       },

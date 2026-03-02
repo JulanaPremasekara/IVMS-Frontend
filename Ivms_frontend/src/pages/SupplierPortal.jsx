@@ -55,7 +55,7 @@ const SupplierPortal = () => {
           
           <ActionButton label="Manage Vendors" variant="primary" onClick={() => navigate('/supplier/manage')} />
           <ActionButton label="Vendor Directory" variant="primary" onClick={() => navigate('/supplier/directory')} />
-          <ActionButton label="Vendor Directory" variant="primary" onClick={() => navigate('/supplier/analytics')} /> 
+          <ActionButton label="Analytics" variant="primary" onClick={() => navigate('/supplier/analytics')} /> 
           <ActionButton label="Add Vendor" icon={Plus} variant="primary" onClick={() => navigate('/supplier/register')} />
           
         </div>
