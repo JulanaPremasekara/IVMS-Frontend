@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
@@ -16,7 +16,7 @@ import PaymentProcessing from './PaymentProcessing';
 import ManageFinancialEntries from './ManageFinancialEntries';
 import TransactionModal from './TransactionModal';
 
-// Sample Data (Moved outside to keep component clean)
+/*// Sample Data (Moved outside to keep component clean)
 const barData = [
   { name: 'Jan', Revenue: 130000, Expenses: 85000 },
   { name: 'Feb', Revenue: 150000, Expenses: 95000 },
@@ -69,20 +69,154 @@ const transactions = [
     status: "Paid",
     date: "2026-02-15",
   },
-];
+];*/
+/*const ledgerData = [
+  {
+    id: "INV-2026-001",
+    order: "SO-1045",
+    type: "Sale",
+    party: "Acme Corporation",
+    amount: 45750,
+    tax: 9150,
+    total: 54900,
+    status: "Paid",
+    time: "2026-02-18 14:32:00",
+  },
+  {
+    id: "EXP-2026-045",
+    order: "PO-2089",
+    type: "Purchase",
+    party: "TechSupply Co.",
+    amount: 28500,
+    tax: 5700,
+    total: 34200,
+    status: "Pending",
+    time: "2026-02-19 09:15:00",
+  },
+  {
+    id: "INV-2026-002",
+    order: "SO-1046",
+    type: "Sale",
+    party: "Global Enterprises Ltd.",
+    amount: 62400,
+    tax: 12480,
+    total: 74880,
+    status: "Pending",
+    time: "2026-02-20 11:20:00",
+  },
+];*/
+
+// 2. Derive Transactions for the Report Table
+/*const transactions = ledgerData.map(item => ({
+  id: item.id,
+  order: item.order,
+  type: item.type === 'Sale' ? 'Revenue' : 'Expense',
+  category: item.party,
+  amount: item.total,
+  status: item.status,
+  date: item.time.split(' ')[0],
+}));
+
+// 3. Derive Total Revenue & Expenses for Summary Cards
+const totalIncome = ledgerData
+  .filter(t => t.type === 'Sale')
+  .reduce((sum, t) => sum + t.total, 0);
+
+const totalExpenses = ledgerData
+  .filter(t => t.type === 'Purchase')
+  .reduce((sum, t) => sum + t.total, 0);
+
+const netProfit = totalIncome - totalExpenses;*/
+
+// Helper to get Revenue vs Expenses by month for the Bar Chart
+const getBarData = (data) => {
+  const grouped = {};
+
+  data.forEach(d => {
+    const month = new Date(d.time).toLocaleString('default', { month: 'short' });
+
+    if (!grouped[month]) {
+      grouped[month] = { name: month, Revenue: 0, Expenses: 0 };
+    }
+
+    if (d.type === 'Sale') grouped[month].Revenue += d.total;
+    if (d.type === 'Purchase') grouped[month].Expenses += d.total;
+  });
+
+  return Object.values(grouped);
+};
+
+const getPieData = (data) => {
+  const map = {};
+
+  data
+    .filter(d => d.type === 'Purchase')
+    .forEach(d => {
+      map[d.party] = (map[d.party] || 0) + d.total;
+    });
+
+  return Object.entries(map).map(([name, value]) => ({ name, value }));
+};
+
+const getLineData = (data) =>
+  data
+    .filter(d => d.type === 'Sale')
+    .map(d => ({
+      date: d.time.split(' ')[0],
+      Revenue: d.total
+    }));
+
+const COLORS = ['#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd', '#d1d5db'];
+
 
 const FinancialReports = () => {
+  const [ledgerData, setLedgerData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeSubView, setActiveSubView] = useState(null);
   const [activeTab, setActiveTab] = useState('Profit & Loss');
-  const [activeSubView, setActiveSubView] = useState(null); 
-  const [selectedReport, setSelectedReport] = useState(null); // Modal State
-  
-  const totalIncome = transactions
-  .filter(t => t.type === "Revenue")
-  .reduce((sum, t) => sum + t.amount, 0);
+  const [selectedReport, setSelectedReport] = useState(null);
 
-  const totalExpenses = transactions
-  .filter(t => t.type === "Expense")
-  .reduce((sum, t) => sum + t.amount, 0);
+  useEffect(() => {
+    fetch('http://localhost:8080/api/ledger/transactions')
+      .then(response => response.json())
+      .then(data => {
+        setLedgerData(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
+
+  // ✅ LOADING STATE MUST BE FIRST
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-slate-500">
+        Loading financial reports...
+      </div>
+    );
+  }
+
+  // ✅ DERIVED DATA (NOW SAFE)
+  const transactions = ledgerData.map(item => ({
+    id: item.id,
+    order: item.order,
+    party: item.party,
+    type: item.type === 'Sale' ? 'Revenue' : 'Expense',
+    category: item.category,
+    amount: item.total,
+    status: item.status,
+    date: item.time.split(' ')[0],
+  }));
+
+  const totalIncome = ledgerData
+    .filter(t => t.type === 'Sale')
+    .reduce((sum, t) => sum + t.total, 0);
+
+  const totalExpenses = ledgerData
+    .filter(t => t.type === 'Purchase')
+    .reduce((sum, t) => sum + t.total, 0);
 
   const netProfit = totalIncome - totalExpenses;
 
@@ -94,6 +228,28 @@ const FinancialReports = () => {
     return <ManageFinancialEntries onBack={() => setActiveSubView(null)} />;
   }
 
+  const barData = getBarData(ledgerData);
+  const pieData = getPieData(ledgerData);
+  const lineData = getLineData(ledgerData);
+
+  const downloadExport = async (format) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/ledger/export/report/${format}`);
+      if (!response.ok) throw new Error("Server error occurred during export");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Financial_Report_${new Date().toISOString().slice(0, 10)}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (error) {
+      console.error("Export failed", error);
+    }
+  };
+
   return (
     <div className="flex-1 bg-slate-50 min-h-screen p-8">
       {/* Top Header Actions */}
@@ -104,25 +260,25 @@ const FinancialReports = () => {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative flex items-center gap-2 bg-white border border-slate-200 px-2 py-2 rounded-lg text-xs font-semibold text-slate-600 shadow-sm hover:border-slate-300 transition-colors ">
-              {/* Icon stays on the left */}
-              <Calendar size={14} className="text-slate-400" />
+            {/* Icon stays on the left */}
+            <Calendar size={14} className="text-slate-400" />
 
-                <select className="bg-transparent outline-none appearance-none cursor-pointer pr-5 w-full">
-                  <option>&nbsp;&nbsp;Last 7 Days</option>
-                  <option>&nbsp;&nbsp;Last 30 Days</option>
-                  <option>&nbsp;&nbsp;This Month</option>
-                  <option>&nbsp;&nbsp;Last Month</option>
-                  <option>&nbsp;&nbsp;This Quarter</option>
-                  <option>&nbsp;&nbsp;Custom Range</option>
-                </select>
+            <select className="bg-transparent outline-none appearance-none cursor-pointer pr-5 w-full">
+              <option>&nbsp;&nbsp;Last 7 Days</option>
+              <option>&nbsp;&nbsp;Last 30 Days</option>
+              <option>&nbsp;&nbsp;This Month</option>
+              <option>&nbsp;&nbsp;Last Month</option>
+              <option>&nbsp;&nbsp;This Quarter</option>
+              <option>&nbsp;&nbsp;Custom Range</option>
+            </select>
 
-              {/* Custom Arrow - positioned absolutely so it doesn't move */}
-              <div className="absolute right-3 pointer-events-none text-slate-400">
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 1L5 5L9 1" />
-                </svg>
-              </div>
+            {/* Custom Arrow - positioned absolutely so it doesn't move */}
+            <div className="absolute right-3 pointer-events-none text-slate-400">
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 1L5 5L9 1" />
+              </svg>
             </div>
+          </div>
           <button
             onClick={() => setActiveSubView('payment')}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition-colors"
@@ -136,10 +292,12 @@ const FinancialReports = () => {
             <Ban size={14} /> Void Entry
           </button>
           <div className="h-8 w-px bg-slate-200 mx-1" />
-          <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900">
+          <button
+            onClick={() => downloadExport('pdf')} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900">
             <FileDown size={14} /> Export PDF
           </button>
-          <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900">
+          <button
+            onClick={() => downloadExport('excel')} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900">
             <FileSpreadsheet size={14} /> Export Excel
           </button>
         </div>
@@ -195,52 +353,51 @@ const FinancialReports = () => {
 
           {/* Charts Row */}
           <div className="grid grid-cols-12 gap-6 mb-8">
-            <div className="col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-6">
-                <TrendingUp size={18} className="text-slate-400" />
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Revenue vs Expenses</h4>
-              </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    <Legend iconType="rect" align="center" verticalAlign="bottom" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
-                    <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} barSize={35} />
-                    <Bar dataKey="Expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={35} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+
+            {/* Bar Chart Container */}
+            <div className="col-span-7 bg-white p-6 rounded-2xl border border-slate-200 h-80">
+              <h4 className="text-sm font-bold text-slate-700 mb-1">Revenue vs Expenses</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Expenses" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
-            <div className="col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-6">
-                <PieIcon size={18} className="text-slate-400" />
-                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Expense Breakdown</h4>
-              </div>
-              <div className="h-64 flex">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-col justify-center gap-3 pr-4">
-                  {pieData.map((item) => (
-                    <div key={item.name} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-[11px] font-medium text-slate-600">{item.name}: {item.value}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Pie Chart Container */}
+            <div className="col-span-5 bg-white p-6 rounded-2xl border border-slate-200 h-80">
+              <h4 className="text-sm font-bold text-slate-700 mb-4">Expense Breakdown</h4>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5}>
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
+          </div>
+
+          {/* Line Chart Container */}
+          <div className="col-span-12 bg-white p-6 rounded-2xl border border-slate-200 h-80 mb-8">
+            <h4 className="text-sm font-bold text-slate-700 mb-4">Revenue Trend</h4>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="Revenue" stroke="#1e3a8a" strokeWidth={3} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
 
           {/* Table */}
@@ -264,10 +421,20 @@ const FinancialReports = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {/* Notice 'onView' is passed here */}
-                <ReportRow onView={(data) => setSelectedReport(data)} id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" category="Product Sales" amount="54,900.00" status="Paid" date="2026-02-18" />
-                <ReportRow onView={(data) => setSelectedReport(data)} id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" category="Procurement" amount="34,200.00" status="Pending" date="2026-02-19" />
-                <ReportRow onView={(data) => setSelectedReport(data)} id="EXP-2026-048" order="SAL-001" party="Payroll Department" type="Expense" category="Salaries" amount="28,000.00" status="Paid" date="2026-02-15" />
+                {transactions.map((t) => (
+                  <ReportRow
+                    key={t.id}
+                    id={t.id}
+                    order={t.order} // Add order to your transactions map if needed
+                    party={t.party} // Add party to your transactions map if needed
+                    type={t.type}
+                    category={t.category}
+                    amount={t.amount.toLocaleString()}
+                    status={t.status}
+                    date={t.date}
+                    onView={() => setSelectedReport(t)}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
@@ -276,10 +443,10 @@ const FinancialReports = () => {
 
       {/* Modal Logic (One place) */}
       {selectedReport && (
-        <TransactionModal 
-          isOpen={true} 
-          data={selectedReport} 
-          onClose={() => setSelectedReport(null)} 
+        <TransactionModal
+          isOpen={true}
+          data={selectedReport}
+          onClose={() => setSelectedReport(null)}
         />
       )}
 
@@ -307,12 +474,12 @@ const ReportRow = ({ id, order, party, type, category, amount, status, date, onV
       <span className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold border ${status === 'Paid' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
         <div className={`w-1.5 h-1.5 rounded-full ${status === 'Paid' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
         {status}
-      </span>  
+      </span>
     </td>
     <td className="px-6 py-4 text-slate-500 text-xs">{date}</td>
     <td className="px-6 py-4 text-right">
-      <button 
-        onClick={() => onView({ id, order, party, type, category, amount, status, date })} 
+      <button
+        onClick={() => onView({ id, order, party, type, category, amount, status, date })}
         className="flex items-center gap-1 ml-auto px-2 py-1 border border-slate-200 rounded text-[10px] font-bold text-slate-400 hover:text-blue-900 hover:border-blue-900 transition-all shadow-sm"
       >
         <TrendingUp size={12} /> View

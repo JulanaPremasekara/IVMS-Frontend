@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { Settings, X, Mail, ChevronDown, Zap, CheckCircle2 } from 'lucide-react';
 
-const SettingsModal = ({ isOpen, onClose }) => {
+const SettingsModal = ({ isOpen, onClose, taxRate, setTaxRate }) => {
+  // Use a local state if you want a "Save" button to commit changes,
+  // or use the props directly for immediate updates.
+  const [localTax, setLocalTax] = useState(taxRate);
+
+  const handleSave = () => {
+    setTaxRate(localTax); // Persist the change to the parent
+    onClose();
+  };
   const [autoEmail, setAutoEmail] = useState(true);
 
   if (!isOpen) return null;
@@ -47,10 +55,14 @@ const SettingsModal = ({ isOpen, onClose }) => {
               {/* Dropdown Section */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">Default Tax Rate (VAT)</label>
-                <select className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option>20% - Standard Rate (Default)</option>
-                  <option>5% - Reduced Rate</option>
-                  <option>0% - Zero Rated</option>
+                <select 
+                  value={localTax} 
+                  onChange={(e) => setLocalTax(e.target.value)}
+                  className="w-full p-2.5 ..."
+                >
+                  <option value="20">20% - Standard Rate</option>
+                  <option value="5">5% - Reduced Rate</option>
+                  <option value="0">0% - Zero Rated</option>
                 </select>
                 <p className="text-[11px] text-slate-400 mt-2 italic">This rate will be applied to all auto-generated transactions.</p>
               </div>
@@ -73,7 +85,9 @@ const SettingsModal = ({ isOpen, onClose }) => {
               >
                 Cancel
               </button>
-              <button className="px-5 py-2 text-sm font-medium text-white bg-[#1e3a8a] hover:bg-blue-900 rounded-lg shadow-sm transition-colors">
+              <button 
+                onClick={handleSave}
+                className="px-5 py-2 text-sm font-medium text-white bg-[#1e3a8a] hover:bg-blue-900 rounded-lg shadow-sm transition-colors">
                 Save Settings
               </button>
             </div>
