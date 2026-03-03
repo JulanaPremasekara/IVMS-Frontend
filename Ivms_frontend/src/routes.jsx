@@ -72,6 +72,10 @@ export const router = createBrowserRouter([
       element: <InventoryHub_Register />
     },
     {
+    path: "search",
+    element: <InventoryHub_Search />,
+    },
+    {
       path: "modify", // Matches /inventory/modify
       element: <InventoryHub_Modify />
     },

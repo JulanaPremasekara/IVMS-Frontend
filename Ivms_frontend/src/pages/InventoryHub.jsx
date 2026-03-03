@@ -39,6 +39,30 @@ const InventoryHub = () => {
       <span className="ml-3 text-gray-600 font-medium">Syncing Inventory...</span>
     </div>
   );
+  // --- 4. Archiving Logic ---
+const handleArchiveRequest = async (product) => {
+  // Step 4: System Prompt
+  const confirmed = window.confirm(
+    `Are you sure you want to archive "${product.name}"?\n\nThis will remove the item from active AI forecasts. Confirm?`
+  );
+
+  // Step 5: Manager confirms
+  if (confirmed) {
+    try {
+      // Step 6: Backend marks as Archived (Soft Delete)
+      await axios.patch(`http://localhost:8080/api/v1/archive/${product.id}`);
+      
+      // Update UI: Remove the archived product from the current list
+      setProducts(prev => prev.filter(p => p.id !== product.id));
+      
+      alert("Product archived successfully and removed from active forecasts.");
+    } catch (err) {
+      // Handles Step 3 Extension: If stock remains or orders are pending
+      const errorMessage = err.response?.data || "Archive failed. Please check stock levels.";
+      alert("Action Blocked: " + errorMessage);
+    }
+  }
+};
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -87,26 +111,41 @@ const InventoryHub = () => {
                 <th className="py-4 px-2">Stock</th>
                 <th className="py-4 px-2">Price</th>
                 <th className="py-4 px-2">Status</th>
+                <th className="py-4 px-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-2 font-mono text-sm text-blue-600 font-bold">{p.skuCode}</td>
-                  <td className="py-4 px-2 font-medium text-gray-800">{p.name}</td>
-                  <td className="py-4 px-2 text-gray-500">{p.category?.name}</td>
-                  <td className="py-4 px-2 font-semibold">{p.initialStock} units</td>
-                  <td className="py-4 px-2 font-medium">${p.unitPrice?.toFixed(2)}</td>
-                  <td className="py-4 px-2">
-                    <span className={`px-4 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${
-                      p.initialStock > (p.reorderThreshold || 5) ? 'bg-slate-900' : 'bg-red-500'
-                    }`}>
-                      {p.initialStock > (p.reorderThreshold || 5) ? 'In Stock' : 'Low Stock'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+  {filteredProducts.map((p) => (
+    <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+      <td className="py-4 px-2 font-mono text-sm text-blue-600 font-bold">{p.skuCode}</td>
+      <td className="py-4 px-2 font-medium text-gray-800">{p.name}</td>
+      <td className="py-4 px-2 text-gray-500">{p.category?.name}</td>
+      <td className="py-4 px-2 font-semibold">{p.initialStock} units</td>
+      <td className="py-4 px-2 font-medium">${p.unitPrice?.toFixed(2)}</td>
+      <td className="py-4 px-2">
+        <span className={`px-4 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${
+          p.initialStock > (p.reorderThreshold || 5) ? 'bg-slate-900' : 'bg-red-500'
+        }`}>
+          {p.initialStock > (p.reorderThreshold || 5) ? 'In Stock' : 'Low Stock'}
+        </span>
+      </td>
+      {/* --- ADD THE ACTIONS CELL HERE --- */}
+      {/* Inside your table's tbody map function */}
+<td className="py-4 px-2 text-center">
+  <div className="flex justify-center space-x-2">
+    {/* Archive Button */}
+    <button 
+      onClick={() => handleArchiveRequest(p)} 
+      className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all"
+      title="Archive Product"
+    >
+      <Archive size={18} />
+    </button>
+  </div>
+</td>
+    </tr>
+  ))}
+</tbody>
           </table>
         </div>
         

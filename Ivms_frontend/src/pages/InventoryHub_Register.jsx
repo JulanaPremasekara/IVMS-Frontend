@@ -128,9 +128,6 @@ const InventoryHub_Register = () => {
 
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold text-gray-900">Register New SKU</h1>
-        <button className="flex items-center px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 bg-white hover:bg-gray-50">
-          <Upload size={18} className="mr-2" /> Bulk Upload via CSV
-        </button>
       </div>
 
       <form onSubmit={handleRegisterProduct}>
