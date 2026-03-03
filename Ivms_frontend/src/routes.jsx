@@ -154,9 +154,6 @@ export const router = createBrowserRouter([
 
   {
 
-
-      {
-
         path: "supplier",
         element: <div className="w-full h-full"><Outlet /></div>, // This allows child routes like /manage to render
         children: [
@@ -218,7 +215,4 @@ export const router = createBrowserRouter([
     
 
 ]);
-
-
-
  
