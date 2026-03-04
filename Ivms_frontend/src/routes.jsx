@@ -14,6 +14,7 @@ import ManageVendors from "./pages/ManageVendors";
 import RegisterVendor from "./pages/RegisterVendor";
 import VendorAnalytics from "./pages/VendorAnalytics";
 import VendorDirectory from "./pages/VendorDirectory";
+import BlacklistedVendors from "./pages/BlacklistedVendors";
 
 // --- Inventory Hub Pages (Your Specific Part) ---
 import InventoryHub from "./pages/InventoryHub"; 
@@ -178,6 +179,10 @@ export const router = createBrowserRouter([
 
           { path: "directory",
             element: <VendorDirectory />
+          },
+
+          { path: "blacklist-history", 
+            element: <BlacklistedVendors /> 
           },
 
         ]
