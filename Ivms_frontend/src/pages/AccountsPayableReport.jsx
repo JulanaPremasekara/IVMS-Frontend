@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Ban, FileSpreadsheet, Wallet, Clock, Users,
     Eye, FileText
 } from 'lucide-react';
 import TransactionModal from './TransactionModal';
 
-const apTransactions = [
+/*const apTransactions = [
   {
     id: "INV-2026-001",
     order: "SO-1045",
@@ -46,9 +46,9 @@ const apTransactions = [
     status: "Paid",
     date: "2026-02-21",
   },
-];
+];*/
 
-// Total Outstanding Payables (Pending Expenses)
+/*// Total Outstanding Payables (Pending Expenses)
 const totalOutstandingPayables = apTransactions
   .filter(t => t.type === "Expense" && t.status === "Pending")
   .reduce((sum, t) => sum + t.amount, 0);
@@ -70,10 +70,69 @@ const activeVendors = new Set(
   apTransactions
     .filter(t => t.type === "Expense" && t.status === "Pending")
     .map(t => t.party)
-).size;
+).size;*/
 
 const AccountsPayableContent = () => {
     const [selectedReport, setSelectedReport] = useState(null); // Modal State
+    const [ledgerData, setLedgerData] = useState([]);
+    const [loading, setLoading] = useState(true);
+  
+
+    useEffect(() => {
+        fetch('http://localhost:8080/api/ledger/transactions')
+        .then(res => res.json())
+        .then(data => {
+            setLedgerData(Array.isArray(data) ? data : []);
+            setLoading(false);
+        })
+        .catch(err => {
+            console.error(err);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) {
+    return (
+        <div className="flex items-center justify-center text-slate-500 py-10">
+        Loading accounts payable...
+        </div>
+    );
+    }
+
+    const apTransactions = ledgerData
+    .filter(t => (t.status === 'Pending' || t.status === 'Overdue') && t.type === 'Purchase')
+    .map(t => ({
+        id: t.id,
+        order: t.order,
+        party: t.party,
+        type: t.type === 'Sale' ? 'Revenue' : 'Expense',
+        category: t.category,
+        amount: t.total,
+        status: t.status,
+        date: t.time ? t.time.split(' ')[0] : 'N/A'
+    }));
+    // Total Outstanding Payables (Pending Expenses)
+    const totalOutstandingPayables = apTransactions
+    .filter(t => t.status === 'Pending')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+    // Overdue Payments (Pending Expenses with past date)
+    const today = new Date();
+
+    const overduePayments = apTransactions
+    .filter(
+        t =>
+        t.status === 'Pending' &&
+        new Date(t.date) < today
+    )
+    .reduce((sum, t) => sum + t.amount, 0);
+    // Active Vendors (unique vendors with pending expenses)
+    const activeVendors = new Set(
+    apTransactions
+        .filter(t => t.status === 'Pending')
+        .map(t => t.party)
+    ).size;
+
     return (
         <>
             {/* AP Specific Summary Cards */}
@@ -129,10 +188,20 @@ const AccountsPayableContent = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        <APRow onView ={(data) => setSelectedReport(data)} id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" cat="Product Sales" amt="54,900.00" status="Paid" date="2026-02-18" />
-                        <APRow onView={(data) => setSelectedReport(data)} id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" cat="Procurement" amt="34,200.00" status="Pending" date="2026-02-19" />
-                        <APRow onView={(data) => setSelectedReport(data)} id="INV-2026-002" order="SO-1046" party="Global Enterprises Ltd." type="Revenue" cat="Product Sales" amt="74,880.00" status="Pending" date="2026-02-20" />
-                        <APRow onView={(data) => setSelectedReport(data)} id="EXP-2026-046" order="PO-2090" party="QuickShip Electronics" type="Expense" cat="Procurement" amt="22,500.00" status="Paid" date="2026-02-21" />
+                    {apTransactions.map(t => (
+                        <APRow
+                        key={t.id}
+                        id={t.id}
+                        order={t.order}
+                        party={t.party}
+                        type={t.type}
+                        cat={t.category}
+                        amt={t.amount.toLocaleString()}
+                        status={t.status}
+                        date={t.date}
+                        onView={() => setSelectedReport(t)}
+                        />
+                    ))}
                     </tbody>
                 </table>
             </div>

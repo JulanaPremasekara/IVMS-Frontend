@@ -153,11 +153,13 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
+
       { path: '*', element: <NotFound /> },
       
-
-      {
         
+
+  {
+
         path: "supplier",
         element: <div className="w-full h-full"><Outlet /></div>, // This allows child routes like /manage to render
         children: [
@@ -224,7 +226,4 @@ export const router = createBrowserRouter([
     
 
 ]);
-
-
-
  
