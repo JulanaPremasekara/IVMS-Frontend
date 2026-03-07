@@ -58,7 +58,7 @@ const InventoryHub_Register = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/v1/categories');
+      const response = await axios.get('http://localhost:8083/api/v1/categories');
       // Always good to log the response to see what the backend is actually sending
       console.log("Categories from DB:", response.data); 
       
@@ -73,7 +73,7 @@ const InventoryHub_Register = () => {
   const handleAddCategory = async () => {
     if (newCategory.trim()) {
       try {
-        const response = await axios.post('http://localhost:8080/api/v1/categories', {
+        const response = await axios.post('http://localhost:8083/api/v1/categories', {
           name: newCategory
         });
         setCategories([...categories, response.data.name]);
@@ -90,7 +90,7 @@ const InventoryHub_Register = () => {
   const handleRegisterProduct = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:8080/api/v1/products', formData);
+      const response = await axios.post('http://localhost:8083/api/v1/products', formData);
       alert(`Success! Product registered with SKU: ${response.data.skuCode}`);
       // Optional: Reset form here
     } catch (err) {

@@ -18,7 +18,7 @@ const InventoryHub_Search = () => {
   }
 
   try {
-    const response = await axios.get(`http://localhost:8080/api/v1/inventory/search`, {
+    const response = await axios.get(`http://localhost:8083/api/v1/inventory/search`, {
       params: { query: query }
     });
     

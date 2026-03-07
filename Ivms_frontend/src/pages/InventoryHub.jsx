@@ -16,7 +16,7 @@ const InventoryHub = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/v1/products');
+        const response = await axios.get('http://localhost:8083/api/v1/products');
         setProducts(response.data);
       } catch (err) {
         console.error("Error fetching products:", err);
@@ -41,27 +41,21 @@ const InventoryHub = () => {
   );
   // --- 4. Archiving Logic ---
 const handleArchiveRequest = async (product) => {
-  // Step 4: System Prompt
-  const confirmed = window.confirm(
-    `Are you sure you want to archive "${product.name}"?\n\nThis will remove the item from active AI forecasts. Confirm?`
-  );
-
-  // Step 5: Manager confirms
-  if (confirmed) {
-    try {
-      // Step 6: Backend marks as Archived (Soft Delete)
-      await axios.patch(`http://localhost:8080/api/v1/archive/${product.id}`);
-      
-      // Update UI: Remove the archived product from the current list
-      setProducts(prev => prev.filter(p => p.id !== product.id));
-      
-      alert("Product archived successfully and removed from active forecasts.");
-    } catch (err) {
-      // Handles Step 3 Extension: If stock remains or orders are pending
-      const errorMessage = err.response?.data || "Archive failed. Please check stock levels.";
-      alert("Action Blocked: " + errorMessage);
+    // Accessing properties from the object 'p' you passed in
+    const confirmed = window.confirm(`Archive ${product.name}? This will remove it from AI forecasts.`);
+    
+    if (confirmed) {
+        try {
+            // Ensure the port (8083) matches your running InventoryHUB instance
+            await axios.patch(`http://localhost:8083/api/v1/archive/${product.id}`);
+            alert("Product archived successfully.");
+            setQuery(''); // Clear search to refresh view
+        } catch (err) {
+            // This captures your Spring Boot "Stock levels" validation error
+            const message = err.response?.data || "Archive failed";
+            alert("Action Blocked: " + message);
+        }
     }
-  }
 };
 
   return (

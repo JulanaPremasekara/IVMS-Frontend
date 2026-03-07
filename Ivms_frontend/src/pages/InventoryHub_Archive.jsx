@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Search, ChevronRight, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import BackButton from "../components/ui/BackButton";
+import SockJS from 'sockjs-client';
+import { Stomp } from '@stomp/stompjs'; // Make sure this matches exactly
+
 
 const InventoryHub_Archive = () => {
   const [query, setQuery] = useState('');
@@ -13,7 +16,7 @@ const InventoryHub_Archive = () => {
     const searchProducts = async () => {
       if (query.length > 2) {
         try {
-          const res = await axios.get(`http://localhost:8080/api/v1/archive/search?query=${query}&active=${showActive}`);
+          const res = await axios.get(`http://localhost:8083/api/v1/archive/search?query=${query}&active=${showActive}`);
           setResults(res.data);
         } catch (err) {
           console.error("Search failed", err);
@@ -25,20 +28,50 @@ const InventoryHub_Archive = () => {
     searchProducts();
   }, [query, showActive]);
 
+  // 2. WebSocket Logic: Place this HERE
+  useEffect(() => {
+    const socket = new SockJS('http://localhost:8083/ws-inventory');
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, (frame) => {
+      console.log('Connected to WebSocket: ' + frame);
+      const subscription = stompClient.subscribe('/topic/updates', (sdkEvent) => {
+        alert("Inventory Update: " + sdkEvent.body);
+      });
+    });
+
+    // Cleanup: This closes the connection if you leave the page
+    return () => {
+      if (stompClient && stompClient.connected) {
+        stompClient.disconnect();
+        console.log("Disconnected WebSocket");
+      }
+    };
+  }, []); // The empty array [] ensures this ONLY runs once when the page loads
+
   // 2. Archive Logic: The "Confirm" Action
   const handleArchive = async (productId) => {
     const confirmed = window.confirm("This will remove the item from active AI forecasts. Confirm?");
     if (confirmed) {
       try {
-        await axios.patch(`http://localhost:8080/api/v1/archive/${productId}`);
+        await axios.patch(`http://localhost:8083/api/v1/archive/${productId}`);
         alert("Product archived successfully.");
         setQuery(''); // Reset search
       } catch (err) {
-        // This catches the "Stock Remains" or "Pending Orders" errors from Java
-        alert("Action Blocked: " + err.response.data);
+        //FIX: Use optional chaining and a fallback message
+        const errorMessage = err.response?.data || err.message || "Network Error: Is the server running?";
+        alert("Action Blocked: " + errorMessage);
       }
     }
   };
+  const socket = new SockJS('http://localhost:8083/ws-inventory');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect({}, (frame) => {
+    stompClient.subscribe('/topic/updates', (sdkEvent) => {
+        alert("Inventory Update: " + sdkEvent.body);
+    });
+});
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">

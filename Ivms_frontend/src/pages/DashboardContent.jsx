@@ -27,7 +27,7 @@ const DashboardContent = () => {
   useEffect(() => {
     const fetchRealTimeStats = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/v1/products');
+        const response = await axios.get('http://localhost:8083/api/v1/products');
         setProducts(response.data);
       } catch (err) {
         console.error("Failed to sync dashboard stats:", err);
