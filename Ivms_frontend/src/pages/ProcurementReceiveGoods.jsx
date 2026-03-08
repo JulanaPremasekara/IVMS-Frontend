@@ -1,17 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Package, Search as SearchIcon, Clock,ArrowLeft } from 'lucide-react';
 import { POIncomingCard } from '../components/ui/POIncomingCard';
 import { SearchInputGroup } from '../components/ui/SearchInputGroup';
 import ReceiveGoodsVerification from './ReceiveGoodsVerification';
+import axios from 'axios';
 
 const ProcurementReceiveGoods = () => {
   const [selectedPO, setSelectedPO] = useState(null);
 
-  const incomingPOs = [
-    { id: 'PO-2026-1001', vendor: 'TechSupply Inc.', dueDate: 'Feb 25, 2026', status: 'Due Today' },
-    { id: 'PO-2026-1045', vendor: 'GlobalParts Corp', dueDate: 'Feb 23, 2026', status: 'Overdue' },
-    { id: 'PO-2026-1032', vendor: 'ElectroWholesale Ltd', dueDate: 'Feb 26, 2026', status: 'Upcoming' },
-  ];
+  const [incomingPOs, setIncomingPOs] = useState([]);
+  const [poDataLoading, setPoDataLoading] = useState(false);
+
+  useEffect(() => {
+        const loadincomingPoData = async () => {
+          setPoDataLoading(true);
+          try {
+            // Expected data shape example:
+            // [{ id, name, sku, stock, safety, ai, price }, ...]
+            const res = await axios.get("http://localhost:8081/api/v1/shipments/incoming");
+            setIncomingPOs(Array.isArray(res.data) ? res.data : []);
+          } catch (e) {
+            console.error("Failed to load incoming purchase orders", e);
+            setIncomingPOs([]);
+          } finally {
+            setPoDataLoading(false);
+          }
+        };
+    
+        loadincomingPoData();
+      }, []);
 
   // If a PO is selected, show the full Verification Screen (update1.jpeg)
   if (selectedPO) {
@@ -26,7 +43,7 @@ const ProcurementReceiveGoods = () => {
         </button>
         
         {/* Pass the selected PO data to the verification form */}
-        <ReceiveGoodsVerification poData={selectedPO} />
+        <ReceiveGoodsVerification po={selectedPO} items={selectedPO.items || []} />
       </div>
     );
   }
