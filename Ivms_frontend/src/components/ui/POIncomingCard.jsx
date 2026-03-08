@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box } from 'lucide-react';
 
-export const POIncomingCard = ({ id, vendor, dueDate, status }) => {
+export const POIncomingCard = ({ id, poNumber, vendor, dueDate, status }) => {
   const statusStyles = {
     'Due Today': 'bg-blue-50 text-blue-600 border-blue-100',
     'Overdue': 'bg-red-50 text-red-600 border-red-100',
@@ -15,7 +15,7 @@ export const POIncomingCard = ({ id, vendor, dueDate, status }) => {
           <Box className="w-5 h-5 text-blue-600 group-hover:text-white" />
         </div>
         <div>
-          <h4 className="text-sm font-bold text-slate-800">{id}</h4>
+          <h4 className="text-sm font-bold text-slate-800">{poNumber}</h4>
           <p className="text-xs text-slate-400 font-medium">{vendor}</p>
         </div>
       </div>
