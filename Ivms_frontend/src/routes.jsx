@@ -183,7 +183,7 @@ export const router = createBrowserRouter([
             element: <VendorDirectory />
           },
 
-          { path: "blacklist-history", 
+          { path: "blacklisted", 
             element: <BlacklistedVendors /> 
           },
 
