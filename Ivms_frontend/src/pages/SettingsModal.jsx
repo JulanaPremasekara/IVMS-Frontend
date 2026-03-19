@@ -1,113 +1,101 @@
 import React, { useState } from 'react';
 import { Settings, X, Mail, ChevronDown, Zap, CheckCircle2 } from 'lucide-react';
 
-const SettingsModal = ({ isOpen, onClose }) => {
+const SettingsModal = ({ isOpen, onClose, taxRate, setTaxRate }) => {
+  // Use a local state if you want a "Save" button to commit changes,
+  // or use the props directly for immediate updates.
+  const [localTax, setLocalTax] = useState(taxRate);
+
+  const handleSave = () => {
+    setTaxRate(localTax); // Persist the change to the parent
+    onClose();
+  };
   const [autoEmail, setAutoEmail] = useState(true);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-200">
-        
-        {/* Modal Header */}
-        <div className="p-5 flex justify-between items-start">
-          <div className="flex gap-3">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <Settings size={20} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">Ledger Automation Settings</h3>
-              <p className="text-xs text-slate-500">Configure automated invoice and expense record generation</p>
-            </div>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="px-6 pb-6 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           
-          {/* Email Notifications Section */}
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-              Email Notifications
-            </label>
-            <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white text-blue-500 rounded-lg shadow-sm border border-slate-100">
-                  <Mail size={18} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Auto-Email Invoices</p>
-                  <p className="text-[11px] text-slate-500">Send invoice to customer automatically</p>
+          {/* Modal Card */}
+          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start p-6 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <span className="text-blue-600">⚙️</span> Ledger Automation Settings
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">Configure automated invoice and expense record generation</p>
+              </div>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              {/* Toggle Section */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-3">Email Notifications</label>
+                <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <span className="bg-blue-100 text-blue-600 p-2 rounded-md text-xs">✉️</span>
+                    <div>
+                       <p className="text-sm font-medium text-slate-700">Auto-Notify Finance Team</p>
+                       <p className="text-xs text-slate-500">Send internal notification when invoices are generated</p>
+                    </div>
+                  </div>
+                  {/* Simple Tailwind Toggle */}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                  </label>
                 </div>
               </div>
-              
-              {/* Custom Toggle Switch */}
+
+              {/* Dropdown Section */}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">Default Tax Rate (VAT)</label>
+                <select 
+                  value={localTax} 
+                  onChange={(e) => setLocalTax(e.target.value)}
+                  className="w-full p-2.5 ..."
+                >
+                  <option value="20">20% - Standard Rate</option>
+                  <option value="5">5% - Reduced Rate</option>
+                  <option value="0">0% - Zero Rated</option>
+                </select>
+                <p className="text-[11px] text-slate-400 mt-2 italic">This rate will be applied to all auto-generated transactions.</p>
+              </div>
+
+              {/* Status Box */}
+              <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg flex gap-3">
+                <span className="text-emerald-500 text-lg">⚡</span>
+                <div>
+                  <p className="text-sm font-bold text-emerald-800">Automation Active</p>
+                  <p className="text-xs text-emerald-700/80">Invoices are auto-generated when SO status = "Shipped"</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-3">
               <button 
-                onClick={() => setAutoEmail(!autoEmail)}
-                className={`w-11 h-6 rounded-full transition-colors relative ${autoEmail ? 'bg-blue-900' : 'bg-slate-300'}`}
+                onClick={onClose}
+                className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-gray-300 bg-white"
               >
-                <div className={`absolute top-1 bg-white w-4 h-4 rounded-full transition-all ${autoEmail ? 'left-6' : 'left-1'}`} />
+                Cancel
+              </button>
+              <button 
+                onClick={handleSave}
+                className="px-5 py-2 text-sm font-medium text-white bg-[#1e3a8a] hover:bg-blue-900 rounded-lg shadow-sm transition-colors">
+                Save Settings
               </button>
             </div>
-          </div>
 
-          {/* Tax Rate Section */}
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-              Default Tax Rate (VAT)
-            </label>
-            <div className="relative group">
-              <div className="w-full p-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 flex justify-between items-center cursor-pointer group-hover:border-slate-300 transition-colors">
-                20% - Standard Rate (Default)
-                <ChevronDown size={16} className="text-slate-400" />
-              </div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400 leading-relaxed">
-              This rate will be applied to all auto-generated transactions. Can be overridden per product category.
-            </p>
-          </div>
-
-          {/* Status Box */}
-          <div className="p-4 bg-green-50 border border-green-100 rounded-xl flex gap-4">
-            <div className="text-green-600 mt-0.5">
-              <Zap size={20} fill="currentColor" />
-            </div>
-            <div className="space-y-1">
-              <h4 className="text-sm font-bold text-green-800">Automation Active</h4>
-              <p className="text-[11px] text-green-700 leading-tight">
-                Invoices are auto-generated when SO status = <span className="font-bold">"Shipped"</span>
-              </p>
-              <p className="text-[11px] text-green-700 leading-tight">
-                Expenses are auto-generated when PO status = <span className="font-bold">"Received"</span>
-              </p>
-            </div>
           </div>
         </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2.5 text-sm font-bold text-blue-900 border border-blue-900 rounded-lg hover:bg-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-blue-900 rounded-lg hover:bg-blue-800 transition-shadow shadow-md shadow-blue-900/20"
-          >
-            <CheckCircle2 size={18} />
-            Save Settings
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+      )
+    };
+ 
 
 export default SettingsModal;

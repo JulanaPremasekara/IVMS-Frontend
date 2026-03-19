@@ -1,11 +1,104 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Search, Filter, Database, Ban, Lock, Package,
+    Search, Filter, Database, Ban, Lock, Package, PackageX,
     ArrowUpRight, ArrowDownRight, History, Trash2,
-    AlertTriangle, ShieldAlert, CheckCircle2, XCircle, ArrowLeft
+    AlertTriangle, ShieldAlert, CheckCircle2, XCircle, ArrowLeft,
+    FileDown, FileSpreadsheet
 } from 'lucide-react';
+import VoidModal from './VoidModal';
 
 const ManageFinancialEntries = ({ onBack }) => {
+    const [selectedData, setSelectedData] = useState(null);
+    const [isSuperAdminEnabled, setIsSuperAdminEnabled] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState('All Types');
+    const [statusFilter, setStatusFilter] = useState('Active Records');
+    const [showVoided, setShowVoided] = useState(false);
+    const [financialData, setFinancialData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetch('http://localhost:8080/api/ledger/transactions')
+            .then(res => res.json())
+            .then(data => {
+                setFinancialData(data.map(item => ({
+                    ...item,
+                    amt: item.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                    isExpense: item.type === 'Purchase',
+                    fiscal: item.fiscalPeriod,
+                    stock: item.stockStatus
+                })));
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Error fetching financial data:", err);
+                setLoading(false);
+            });
+    }, []);
+
+    const downloadExport = async (format) => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/ledger/export/entries/${format}`);
+            if (!response.ok) throw new Error("Server error occurred during export");
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Financial_Ledger_${new Date().toISOString().slice(0, 10)}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (error) {
+            console.error("Export failed", error);
+        }
+    };
+
+    // Compute totals dynamically
+    const totalRevenue = financialData
+        .filter(item => item.type === 'Sale' && item.status === 'Paid')
+        .reduce((sum, item) => sum + parseFloat(item.amt.replace(/,/g, '')), 0);
+
+    const totalExpenses = financialData
+        .filter(item => item.type === 'Purchase')
+        .reduce((sum, item) => sum + parseFloat(item.amt.replace(/,/g, '')), 0);
+
+    const filteredData = financialData.filter(item => {
+        // Search filter
+        const matchesSearch = item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.order && item.order.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        // Type filter
+        const matchesType = typeFilter === 'All Types' ||
+            (typeFilter === 'Invoice' && item.type === 'Sale') ||
+            (typeFilter === 'Expense' && item.type === 'Purchase');
+
+        // Status filter
+        let matchesStatus = true;
+        if (statusFilter === 'Active Records') matchesStatus = item.status === 'Pending' || item.status === 'Paid';
+        else if (statusFilter === 'Voided Only') matchesStatus = item.status === 'Voided';
+        else if (statusFilter === 'Paid') matchesStatus = item.status === 'Paid';
+        else if (statusFilter === 'All Status') matchesStatus = true;
+
+        // Show Voided checkbox
+        const matchesVoided = showVoided || item.status !== 'Voided';
+
+        return matchesSearch && matchesType && matchesStatus && matchesVoided;
+    });
+
+    // Calculate real summary metrics
+    const activeCount = financialData.filter(item => item.status === "Paid" || item.status === "Pending").length;
+    const voidedCount = financialData.filter(item => item.status === "Voided").length;
+    const lockedCount = financialData.filter(item => item.isLocked).length;
+    const linkedStockCount = financialData.filter(item => item.stock !== "N/A" && item.stock !== null).length;
+
+    if (loading) {
+        return (
+            <div className="flex-1 bg-slate-50 min-h-screen p-8 flex items-center justify-center">
+                <div className="text-slate-500 font-bold animate-pulse">Loading financial records...</div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 bg-slate-50 min-h-screen p-8">
             {/* Back Button */}
@@ -30,17 +123,32 @@ const ManageFinancialEntries = ({ onBack }) => {
                         <CheckCircle2 size={12} /> Audit Logging Enabled
                     </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900 shadow-sm hover:bg-slate-50">
-                    <History size={14} /> View Audit Trail
-                </button>
+                <div className="flex items-center gap-2">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900 shadow-sm hover:bg-slate-50">
+                        <History size={14} /> View Audit Trail
+                    </button>
+                    <div className="h-8 w-px bg-slate-200 mx-1" />
+                    <button
+                        onClick={() => downloadExport('pdf')}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900 shadow-sm hover:bg-slate-50 transition-all"
+                    >
+                        <FileDown size={14} /> Export PDF
+                    </button>
+                    <button
+                        onClick={() => downloadExport('excel')}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-blue-900 shadow-sm hover:bg-slate-50 transition-all"
+                    >
+                        <FileSpreadsheet size={14} /> Export Excel
+                    </button>
+                </div>
             </div>
 
             {/* Top Metric Row: Status Counts */}
             <div className="grid grid-cols-4 gap-6 mb-4">
-                <StatusCard label="Active Records" count="7" sub="Financial entries" icon={<Database size={18} />} color="blue" />
-                <StatusCard label="Voided Records" count="1" sub="Soft deleted" icon={<Ban size={18} />} color="red" />
-                <StatusCard label="Locked Periods" count="1" sub="Cannot modify" icon={<Lock size={18} />} color="orange" />
-                <StatusCard label="Linked to Stock" count="2" sub="Requires stock adjustment" icon={<Package size={18} />} color="purple" />
+                <StatusCard label="Active Records" count={activeCount} sub="Financial entries" icon={<Database size={18} />} color="blue" />
+                <StatusCard label="Voided Records" count={voidedCount} sub="Soft deleted" icon={<Ban size={18} />} color="red" />
+                <StatusCard label="Locked Periods" count={lockedCount} sub="Cannot modify" icon={<Lock size={18} />} color="orange" />
+                <StatusCard label="Linked to Stock" count={linkedStockCount} sub="Requires stock adjustment" icon={<Package size={18} />} color="purple" />
             </div>
 
             {/* Large Metric Row: Active Totals */}
@@ -48,14 +156,18 @@ const ManageFinancialEntries = ({ onBack }) => {
                 <div className="bg-green-50/50 border border-green-100 p-5 rounded-2xl flex justify-between items-center">
                     <div>
                         <p className="text-[10px] font-bold text-green-700/60 uppercase mb-1">Total Revenue (Active)</p>
-                        <h3 className="text-2xl font-bold text-green-600">$207,300.00</h3>
+                        <h3 className="text-2xl font-bold text-green-600">
+                            ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
                     </div>
                     <ArrowUpRight className="text-green-400" size={32} />
                 </div>
                 <div className="bg-purple-50/50 border border-purple-100 p-5 rounded-2xl flex justify-between items-center">
                     <div>
                         <p className="text-[10px] font-bold text-purple-700/60 uppercase mb-1">Total Expenses (Active)</p>
-                        <h3 className="text-2xl font-bold text-purple-600">$180,500.00</h3>
+                        <h3 className="text-2xl font-bold text-purple-600">
+                            ${totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
                     </div>
                     <ArrowDownRight className="text-purple-400" size={32} />
                 </div>
@@ -64,30 +176,55 @@ const ManageFinancialEntries = ({ onBack }) => {
             {/* Filtering & Search */}
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
                 <div className="grid grid-cols-12 gap-4 items-center">
+                    {/* Search Box */}
                     <div className="col-span-4 relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <input
                             type="text"
                             placeholder="Transaction ID, Order ID, Customer..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                         />
                     </div>
+
+                    {/* Type Filter */}
                     <div className="col-span-2">
-                        <select className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 bg-white outline-none">
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 bg-white outline-none"
+                        >
                             <option>All Types</option>
                             <option>Invoice</option>
                             <option>Expense</option>
                         </select>
                     </div>
+
+                    {/* Status Filter */}
                     <div className="col-span-2">
-                        <select className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 bg-white outline-none">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 bg-white outline-none"
+                        >
                             <option>Active Records</option>
-                            <option>Voided</option>
+                            <option>Voided Only</option>
+                            <option>Pending Approval</option>
+                            <option>Paid</option>
+                            <option>All Status</option>
                         </select>
                     </div>
-                    <div className="col-span-4 flex items-center justify-end gap-3">
+
+                    {/* Show Voided Checkbox */}
+                    <div className="col-span-2 flex items-center">
                         <label className="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900" />
+                            <input
+                                type="checkbox"
+                                checked={showVoided}
+                                onChange={(e) => setShowVoided(e.target.checked)}
+                                className="w-4 h-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900"
+                            />
                             <span className="text-xs font-bold text-slate-500 uppercase">Show Voided</span>
                         </label>
                     </div>
@@ -102,8 +239,17 @@ const ManageFinancialEntries = ({ onBack }) => {
                             <p className="text-[10px] text-orange-700/70 uppercase">Status changes to "Pending Approval" until reviewed</p>
                         </div>
                     </div>
-                    <div className="w-10 h-5 bg-slate-300 rounded-full relative cursor-pointer shadow-inner">
-                        <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm" />
+
+                    {/* Toggle Switch */}
+                    <div
+                        onClick={() => setIsSuperAdminEnabled(!isSuperAdminEnabled)}
+                        className={`w-10 h-5 rounded-full relative cursor-pointer shadow-inner transition-colors duration-200 ${isSuperAdminEnabled ? "bg-red-500" : "bg-slate-300"
+                            }`}
+                    >
+                        <div
+                            className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all duration-200 ${isSuperAdminEnabled ? "left-6" : "left-1"
+                                }`}
+                        />
                     </div>
                 </div>
             </div>
@@ -112,7 +258,7 @@ const ManageFinancialEntries = ({ onBack }) => {
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="p-5 border-b border-slate-100 flex items-center gap-2 bg-slate-50/50">
                     <Database size={18} className="text-blue-900" />
-                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Financial Records (7)</h4>
+                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-tight">Financial Records ({filteredData.length})</h4>
                 </div>
                 <table className="w-full text-left text-sm">
                     <thead className="bg-white text-slate-400 uppercase text-[10px] font-bold tracking-wider">
@@ -128,13 +274,29 @@ const ManageFinancialEntries = ({ onBack }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        <AdminRow id="INV-2026-001" order="SO-1045" type="Invoice" amt="45,800.00" status="Paid" fiscal="Feb 2026" stock="In Inventory" />
-                        <AdminRow id="INV-2026-002" order="SO-1045" type="Invoice" amt="45,800.00" status="Active" fiscal="Feb 2026" stock="N/A" />
-                        <AdminRow id="EXP-2026-045" order="PO-1089" type="Expense" amt="78,500.00" status="Active" fiscal="Feb 2026" stock="In Inventory" isExpense />
-                        <AdminRow id="INV-2025-089" order="SO-0989" type="Invoice" amt="23,400.00" status="Paid" fiscal="Dec 2025" stock="N/A" isLocked />
+                        {filteredData.map((row) => (
+                            <AdminRow
+                                key={row.id}
+                                onView={(data) => setSelectedData(data)}
+                                {...row}
+                            />
+                        ))}
                     </tbody>
                 </table>
             </div>
+            {/* Modal Logic (One place) */}
+            {selectedData && (
+                <VoidModal
+                    isOpen={true}
+                    data={selectedData}
+                    isSuperAdminEnabled={isSuperAdminEnabled} // Pass the state here
+                    onClose={() => setSelectedData(null)}
+                    onDelete={(id) => {
+                        setFinancialData(prev => prev.filter(item => item.id !== id));
+                        setSelectedData(null);
+                    }}
+                />
+            )}
         </div>
     );
 };
@@ -163,7 +325,7 @@ const StatusCard = ({ label, count, sub, icon, color }) => {
     );
 };
 
-const AdminRow = ({ id, order, type, amt, status, fiscal, stock, isExpense, isLocked }) => (
+const AdminRow = ({ id, order, type, amt, status, fiscal, stock, isExpense, isLocked, onView }) => (
     <tr className="hover:bg-slate-50 transition-colors">
         <td className="px-6 py-4 font-medium text-blue-600 underline cursor-pointer">{id}</td>
         <td className="px-6 py-4 text-slate-500 font-medium">{order}</td>
@@ -186,14 +348,16 @@ const AdminRow = ({ id, order, type, amt, status, fiscal, stock, isExpense, isLo
             </span>
         </td>
         <td className="px-6 py-4">
-            {stock !== "N/A" ? (
+            {stock !== "STOCK_OUT" ? (
                 <span className="px-2 py-1 bg-purple-50 text-purple-600 border border-purple-100 rounded text-[9px] font-bold uppercase flex items-center gap-1 w-fit">
                     <Package size={10} /> {stock}
                 </span>
-            ) : <span className="text-slate-300 text-xs font-bold">N/A</span>}
+            ) : <span className="px-2 py-1 bg-red-50 text-red-600 border border-red-100 rounded text-[9px] font-bold uppercase flex items-center gap-1 w-fit"><PackageX size={10} />{stock}</span>}
         </td>
         <td className="px-6 py-4 text-right">
-            <button className="flex items-center gap-1.5 ml-auto px-3 py-1.5 border border-red-200 text-red-600 bg-red-50 rounded-lg text-[10px] font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
+            <button
+                onClick={() => onView({ id, amt, stock, fiscal, status, type, order, isExpense, isLocked })}
+                className="flex items-center gap-1.5 ml-auto px-3 py-1.5 border border-red-200 text-red-600 bg-red-50 rounded-lg text-[10px] font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
                 <Trash2 size={12} /> Void / Delete
             </button>
         </td>
