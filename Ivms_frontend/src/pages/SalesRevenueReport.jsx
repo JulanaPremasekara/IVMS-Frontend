@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
     FileSpreadsheet, TrendingUp, FileText, DollarSign, Target, Hash, Eye
 } from 'lucide-react';
@@ -7,14 +7,42 @@ import TransactionModal from './TransactionModal';
 
 const SalesRevenueContent = () => {
     const [selectedReport, setSelectedReport] = useState(null); // Modal State
+    const [ledgerData, setLedgerData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const salesTransactions = [
-    { id: "INV-2026-001", order: "SO-1045", party: "Acme Corporation", type: "Revenue", category: "Product Sales", amount: 54900, status: "Paid", date: "2026-02-18" },
-    { id: "EXP-2026-045", order: "PO-2089", party: "TechSupply Co.", type: "Expense", category: "Procurement", amount: 34200, status: "Pending", date: "2026-02-19" },
-    { id: "INV-2026-002", order: "SO-1046", party: "Global Enterprises Ltd.", type: "Revenue", category: "Product Sales", amount: 74880, status: "Pending", date: "2026-02-20" },
-    { id: "EXP-2026-046", order: "PO-2090", party: "QuickShip Electronics", type: "Expense", category: "Procurement", amount: 22500, status: "Paid", date: "2026-02-21" },
-    { id: "INV-2026-003", order: "SO-1047", party: "SmartTech Solutions", type: "Revenue", category: "Product Sales", amount: 39840, status: "Paid", date: "2026-02-21" },
-    ];
+    useEffect(() => {
+        fetch('http://localhost:8080/api/ledger/transactions')
+            .then(response => response.json())
+            .then(data => {
+                setLedgerData(Array.isArray(data) ? data : []);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error(err);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) {
+    return (
+        <div className="flex items-center justify-center text-slate-500 py-10">
+        Loading sales revenue data...
+        </div>
+    );
+    }
+
+    const salesTransactions = ledgerData
+    .filter(t => t.type === 'Sale')
+    .map(t => ({
+        id: t.id,
+        order: t.order,
+        party: t.party,
+        type: t.type === 'Sale' ? 'Revenue' : 'Expense',
+        category: t.category,
+        amount: t.total,
+        status: t.status,
+        date: t.time ? t.time.split(' ')[0] : 'N/A'
+    }));
 
     const revenueTransactions = salesTransactions.filter(t => t.type === "Revenue");
 
@@ -77,11 +105,20 @@ const SalesRevenueContent = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        <SalesRow onView={(data) => setSelectedReport(data)} id="INV-2026-001" order="SO-1045" party="Acme Corporation" type="Revenue" cat="Product Sales" amt="54,900.00" status="Paid" date="2026-02-18" />
-                        <SalesRow onView={(data) => setSelectedReport(data)} id="EXP-2026-045" order="PO-2089" party="TechSupply Co." type="Expense" cat="Procurement" amt="34,200.00" status="Pending" date="2026-02-19" />
-                        <SalesRow onView={(data) => setSelectedReport(data)} id="INV-2026-002" order="SO-1046" party="Global Enterprises Ltd." type="Revenue" cat="Product Sales" amt="74,880.00" status="Pending" date="2026-02-20" />
-                        <SalesRow onView={(data) => setSelectedReport(data)} id="EXP-2026-046" order="PO-2090" party="QuickShip Electronics" type="Expense" cat="Procurement" amt="22,500.00" status="Paid" date="2026-02-21" />
-                        <SalesRow onView={(data) => setSelectedReport(data)} id="INV-2026-003" order="SO-1047" party="SmartTech Solutions" type="Revenue" cat="Product Sales" amt="39,840.00" status="Paid" date="2026-02-21 " />
+                    {salesTransactions.map(t => (
+                        <SalesRow
+                        key={t.id}
+                        id={t.id}
+                        order={t.order}
+                        party={t.party}
+                        type={t.type}
+                        cat={t.category}
+                        amt={t.amount.toLocaleString()}
+                        status={t.status}
+                        date={t.date}
+                        onView={() => setSelectedReport(t)}
+                        />
+                    ))}
                     </tbody>
                 </table>
             </div>
