@@ -21,7 +21,7 @@ const AdminControl = () => {
     },
     {
       title: "Admin Operations",
-      subtitle: "Reset passwords, manage accounts, and execute warehouse transfers",
+      subtitle: "Transfer stock between warehouses with full audit trail",
       icon: Settings,
       colorClass: "bg-amber-500",
       path: "/admin/operations"
