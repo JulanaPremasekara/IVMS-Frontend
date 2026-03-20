@@ -24,17 +24,14 @@ import InventoryHub_Search from "./pages/InventoryHub_Search";
 import InventoryDashboard from "./pages/InventoryDashboard";
 import DashboardContent from "./pages/DashboardContent";
 
-// --- Financial Pages ---
+// --- Financial ---
 import FinancialLedger from "./pages/FinancialLedger";
 import FinancialReports from "./pages/FinancialReports";
 
-// Sales Engine
+// --- Sales ---
 import SalesEngine from "./pages/SalesEngine";
 
-// Placeholder Pages
-import PlaceholderPage from "./components/PlaceholderPage";
-
-// Admin Control
+// --- Admin ---
 import AdminControl from "./pages/Admincontrol";
 
 // User management
@@ -90,26 +87,11 @@ export const router = createBrowserRouter([
         path: "procurement",
         element: <ProcurementLayout />,
         children: [
-          {
-            index: true,
-            element: <ProcurementHub />
-          },
-          {
-            path: "track-shipments",
-            element: <ProcurementShipment />
-          },
-          {
-            path: "create-purchase-order",
-            element: <ProcurementCreatePurchaseOrder />
-          },
-          {
-            path: "manage-purchase-orders",
-            element: <ProcurementManagePurchaseOrders />
-          },
-          {
-            path: "receive-goods",
-            element: <ProcurementReceiveGoods />
-          }
+          { index: true, element: <DashboardContent /> },
+          { path: "register", element: <InventoryHub_Register /> },
+          { path: "modify", element: <InventoryHub_Modify /> },
+          { path: "archive", element: <InventoryHub_Archive /> },
+          { path: "inventoryHub", element: <InventoryHub /> },
         ]
       },
 
