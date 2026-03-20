@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   MapPin,
   Anchor,
-  ChevronRight,
 } from "lucide-react";
 import { StatCard } from "../components/ui/StatCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -35,22 +34,18 @@ const TIMELINE_STEPS = [
 
 const ProcurementShipment = () => {
   const [selectedShipment, setSelectedShipment] = useState(null);
-
-  // ✅ data comes from backend (ShipmentListRowDto)
   const [shipments, setShipments] = useState([]);
   const [shipmentsLoading, setShipmentsLoading] = useState(false);
-
-  // ✅ timeline events from backend (TimelineEventDto)
   const [timelineEvents, setTimelineEvents] = useState([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
-
   const [search, setSearch] = useState("");
+  const [expectedFrom, setExpectedFrom] = useState("");
+  const [expectedTo, setExpectedTo] = useState("");
 
   const fetchShipments = async () => {
     setShipmentsLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/api/v1/shipments`);
-      // Expected: ShipmentListRowDto[]
       setShipments(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       console.error("Failed to load shipments", e);
@@ -67,7 +62,6 @@ const ProcurementShipment = () => {
       const res = await axios.get(
         `${API_BASE}/api/v1/shipments/${encodeURIComponent(trackingId)}/timeline`
       );
-      // Expected: TimelineEventDto[]
       setTimelineEvents(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       console.error("Failed to load timeline", e);
@@ -77,12 +71,10 @@ const ProcurementShipment = () => {
     }
   };
 
-  // Initial load
   useEffect(() => {
     fetchShipments();
   }, []);
 
-  // When open details panel, load timeline
   useEffect(() => {
     if (selectedShipment?.trackingId) {
       fetchTimeline(selectedShipment.trackingId);
@@ -91,7 +83,6 @@ const ProcurementShipment = () => {
     }
   }, [selectedShipment?.trackingId]);
 
-  // ✅ SSE realtime updates (refresh list and timeline when relevant)
   useEffect(() => {
     const es = new EventSource(`${API_BASE}/api/v1/realtime/stream`);
 
@@ -99,19 +90,18 @@ const ProcurementShipment = () => {
       try {
         const data = JSON.parse(event.data);
 
-        // You can refine these types to match what your backend emits
         if (data.type === "SHIPMENT_CREATED" || data.type === "SHIPMENT_STATUS_UPDATED") {
           fetchShipments();
           if (
             selectedShipment?.trackingId &&
-            (data.trackingId === selectedShipment.trackingId || data.key === selectedShipment.trackingId)
+            (data.trackingId === selectedShipment.trackingId ||
+              data.key === selectedShipment.trackingId)
           ) {
             fetchTimeline(selectedShipment.trackingId);
           }
         }
 
         if (data.type === "SHIPMENT_TIMELINE_EVENT") {
-          // { type, trackingId } (recommended)
           if (selectedShipment?.trackingId && data.trackingId === selectedShipment.trackingId) {
             fetchTimeline(selectedShipment.trackingId);
             fetchShipments();
@@ -119,53 +109,91 @@ const ProcurementShipment = () => {
         }
 
         if (data.type === "PO_APPROVED") {
-          // PO status changed could affect shipment availability in list
           fetchShipments();
         }
-      } catch (e) {
-        // ignore non-json
-      }
+      } catch (e) {}
     };
 
-    es.onerror = () => {
-      // Browser will auto-reconnect; no action needed
-    };
+    es.onerror = () => {};
 
     return () => es.close();
   }, [selectedShipment?.trackingId]);
 
-  // Search filter (PO# or Tracking ID)
   const filteredShipments = useMemo(() => {
     const q = (search || "").trim().toLowerCase();
-    if (!q) return shipments;
 
     return shipments.filter((s) => {
       const po = (s.poNumber || "").toLowerCase();
       const tr = (s.trackingId || "").toLowerCase();
-      return po.includes(q) || tr.includes(q);
+      const matchesSearch = !q || po.includes(q) || tr.includes(q);
+
+      const arrivalDate = s.arrival ? new Date(s.arrival) : null;
+      const fromDate = expectedFrom ? new Date(expectedFrom) : null;
+      const toDate = expectedTo ? new Date(expectedTo) : null;
+      const matchesFrom = !fromDate || (arrivalDate && arrivalDate >= fromDate);
+      const matchesTo = !toDate || (arrivalDate && arrivalDate <= toDate);
+
+      return matchesSearch && matchesFrom && matchesTo ;
     });
-  }, [shipments, search]);
+  }, [shipments, search, expectedFrom, expectedTo]);
 
-  // Stats from live data
   const stats = useMemo(() => {
-    const total = shipments.length;
-    const statusCounts = shipments.reduce((acc, s) => {
-      const k = (s.status || "").toUpperCase();
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, {});
+  const total = shipments.length;
 
-    return {
-      total,
-      inTransit: statusCounts["IN_TRANSIT"] || 0,
-      delayed: statusCounts["DELAYED"] || 0,
-      inCustoms: statusCounts["CUSTOMS_CLEARANCE"] || statusCounts["IN_CUSTOMS"] || 0,
-      partial: statusCounts["PARTIAL"] || 0,
-      thisWeek: total, // keep as-is unless you add arrival-date logic
-    };
-  }, [shipments]);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  // Merge backend events into step list (done/pending + show time/location/note for done steps)
+  const day = today.getDay(); // Sunday = 0, Monday = 1
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() + diffToMonday);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const stats = shipments.reduce((acc, s) => {
+    const k = (s.status || "").toUpperCase();
+    acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
+
+  const delayed = shipments.filter((s) => {
+    const status = (s.status || "").toUpperCase();
+
+    if (status === "DELIVERED") return false;
+    if (!s.arrival) return false;
+
+    const expectedDate = new Date(s.arrival);
+    if (isNaN(expectedDate.getTime())) return false;
+
+    expectedDate.setHours(0, 0, 0, 0);
+
+    return expectedDate < today;
+  }).length;
+
+  const thisWeek = shipments.filter((s) => {
+    if (!s.arrival) return false;
+
+    const arrivalDate = new Date(s.arrival);
+    if (isNaN(arrivalDate.getTime())) return false;
+
+    return arrivalDate >= weekStart && arrivalDate <= weekEnd;
+  }).length;
+
+  return {
+    total,
+    inTransit: stats["IN_TRANSIT"] || 0,
+    delayed,
+    inCustoms: stats["CUSTOMS_CLEARANCE"] || stats["IN_CUSTOMS"] || 0,
+    thisWeek,
+  };
+}, [shipments]);
+
+    
+
   const mergedTimeline = useMemo(() => {
     const eventByStatus = new Map(
       (timelineEvents || []).map((e) => [String(e.status || "").toUpperCase(), e])
@@ -189,7 +217,6 @@ const ProcurementShipment = () => {
 
   return (
     <div className="relative space-y-6 overflow-hidden">
-      {/* 1. Breadcrumbs */}
       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
         <span>Procurement</span>
         <span>/</span>
@@ -199,38 +226,68 @@ const ProcurementShipment = () => {
         </span>
       </div>
 
-      {/* 2. Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard title="Total Active" value={String(stats.total)} icon={Package} bgColor="bg-blue-500" />
         <StatCard title="In Transit" value={String(stats.inTransit)} icon={Truck} bgColor="bg-blue-400" />
         <StatCard title="Delayed" value={String(stats.delayed)} icon={AlertCircle} bgColor="bg-red-500" />
         <StatCard title="In Customs" value={String(stats.inCustoms)} icon={HardHat} bgColor="bg-orange-500" />
-        <StatCard title="Partial" value={String(stats.partial)} icon={Layers} bgColor="bg-purple-500" />
         <StatCard title="This Week" value={String(stats.thisWeek)} icon={TrendingUp} bgColor="bg-emerald-500" />
       </div>
 
-      {/* 3. Filters Section */}
       <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4">
         <div className="flex items-center gap-2 text-slate-800 font-bold text-sm border-b border-slate-50 pb-3">
           <Filter className="w-4 h-4 text-blue-500" /> Advanced Filters
         </div>
+
         <div className="grid grid-cols-5 gap-4">
-          {["Vendor", "Status", "Region", "Expected From", "Expected To"].map((label) => (
-            <div key={label} className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase">{label}</label>
-              <select className="w-full border border-slate-200 rounded-md p-2 text-xs text-slate-600 bg-slate-50/50 outline-none">
-                <option>All {label}s</option>
-              </select>
-            </div>
-          ))}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase">Vendor</label>
+            <select className="w-full border border-slate-200 rounded-md p-2 text-xs text-slate-600 bg-slate-50/50 outline-none">
+              <option>All Vendors</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase">Status</label>
+            <select className="w-full border border-slate-200 rounded-md p-2 text-xs text-slate-600 bg-slate-50/50 outline-none">
+              <option>All Statuses</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase">Region</label>
+            <select className="w-full border border-slate-200 rounded-md p-2 text-xs text-slate-600 bg-slate-50/50 outline-none">
+              <option>All Regions</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase">Expected From</label>
+            <input
+              type="date"
+              value={expectedFrom}
+              onChange={(e) => setExpectedFrom(e.target.value)}
+              className="w-full border border-slate-200 rounded-md p-2 text-xs text-slate-600 bg-slate-50/50 outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase">Expected To</label>
+            <input
+              type="date"
+              value={expectedTo}
+              onChange={(e) => setExpectedTo(e.target.value)}
+              className="w-full border border-slate-200 rounded-md p-2 text-xs text-slate-600 bg-slate-50/50 outline-none"
+            />
+          </div>
         </div>
       </div>
 
-      {/* 4. Shipment Table */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-4 flex items-center justify-between border-b border-slate-50">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Package className="w-4 h-4 text-blue-500" /> Active Shipments ({shipmentsLoading ? "..." : filteredShipments.length})
+            <Package className="w-4 h-4 text-blue-500" /> Active Shipments (
+            {shipmentsLoading ? "..." : filteredShipments.length})
           </h2>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -313,18 +370,14 @@ const ProcurementShipment = () => {
         </div>
       </div>
 
-      {/* 5. SHIPMENT DETAILS SIDE PANEL */}
       {selectedShipment && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-[100]"
             onClick={() => setSelectedShipment(null)}
           />
 
-          {/* Side Panel */}
           <div className="fixed right-0 top-0 h-full w-[400px] bg-white shadow-2xl z-[110] border-l border-slate-100 flex flex-col animate-in slide-in-from-right duration-300">
-            {/* Header */}
             <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -343,7 +396,6 @@ const ProcurementShipment = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-8">
-              {/* Shipment Overview Section */}
               <section className="space-y-4">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Shipment Overview
@@ -358,13 +410,7 @@ const ProcurementShipment = () => {
                     <p className="text-xs font-bold text-slate-800 mt-1">{selectedShipment.vendor}</p>
                   </div>
 
-                  {/* Carrier not provided by backend DTO; keep placeholder */}
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Carrier</p>
-                    <p className="text-xs font-bold text-slate-800 mt-1 flex items-center gap-1.5">
-                      <Anchor className="w-3.5 h-3.5 text-slate-400" /> {"-"}
-                    </p>
-                  </div>
+                  
 
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Tracking Number</p>
@@ -373,18 +419,14 @@ const ProcurementShipment = () => {
                     </p>
                   </div>
 
-                  {/* Type not provided by backend DTO; keep placeholder */}
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Shipment Type</p>
-                    <p className="text-xs font-bold text-slate-800 mt-1">{"-"}</p>
-                  </div>
-
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Status</p>
                     <div className="mt-1">
                       <StatusBadge status={selectedShipment.status} />
                     </div>
                   </div>
+
+                  
                 </div>
 
                 <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 flex items-center gap-3">
@@ -400,7 +442,6 @@ const ProcurementShipment = () => {
                 </div>
               </section>
 
-              {/* Live Status Timeline Section */}
               <section className="space-y-4">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Live Status Timeline
@@ -410,14 +451,11 @@ const ProcurementShipment = () => {
                   <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-100" />
 
                   {mergedTimeline.map((item) => (
-                    <div
-                      key={item.key}
-                      className={`flex gap-4 relative ${item.done ? "" : "opacity-50"}`}
-                    >
+                    <div key={item.key} className={`flex gap-4 relative ${item.done ? "" : "opacity-50"}`}>
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center z-10 border
-                          ${item.done ? "bg-emerald-50 border-emerald-100" : "bg-white border-slate-200"}
-                        `}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center z-10 border ${
+                          item.done ? "bg-emerald-50 border-emerald-100" : "bg-white border-slate-200"
+                        }`}
                       >
                         {item.done ? (
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
@@ -451,14 +489,11 @@ const ProcurementShipment = () => {
                   ))}
 
                   {!timelineLoading && mergedTimeline.every((x) => !x.done) && (
-                    <div className="text-[10px] text-slate-400 pl-8">
-                      No timeline events yet.
-                    </div>
+                    <div className="text-[10px] text-slate-400 pl-8">No timeline events yet.</div>
                   )}
                 </div>
               </section>
 
-              {/* Items Breakdown Footer (Sticky-like) */}
               <section className="pt-6 border-t border-slate-100 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-slate-800">Items Breakdown</span>

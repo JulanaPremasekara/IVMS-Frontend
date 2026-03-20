@@ -154,33 +154,7 @@ export default function VoidPurchaseOrderModal({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-slate-800 flex items-center gap-2">
-              <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px]">
-                3
-              </span>
-              Vendor Notification
-            </p>
-            <div className="ml-7 flex items-center justify-between p-3 border border-slate-100 rounded-lg">
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                <Mail className="w-4 h-4 text-blue-500" /> Notify Vendor by Email
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setNotifyVendor((prev) => !prev)}
-                className={`w-10 h-5 rounded-full relative transition ${
-                  notifyVendor ? "bg-blue-500" : "bg-slate-200"
-                }`}
-              >
-                <div
-                  className={`absolute top-1 bg-white w-3 h-3 rounded-full shadow-sm transition-all ${
-                    notifyVendor ? "left-6" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
+          
 
           <div className="p-4 bg-orange-50/40 border border-orange-100 rounded-xl space-y-3 mt-4">
             <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider text-center">

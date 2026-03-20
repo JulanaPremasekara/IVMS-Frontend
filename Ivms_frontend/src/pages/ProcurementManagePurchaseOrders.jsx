@@ -29,6 +29,10 @@ const ProcurementManagePurchaseOrders = () => {
   const [modal, setModal] = useState("none");
   const [voidConfirmText, setVoidConfirmText] = useState("");
 
+  //filter logic
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [searchTerm, setSearchTerm] = useState("");
+
   const menuRef = useRef(null);
 
   const isDetailsOpen = modal === "details";
@@ -97,6 +101,14 @@ const ProcurementManagePurchaseOrders = () => {
     setSelectedPO(null);
     setVoidConfirmText("");
   };
+
+  const filteredPoData = poData.filter(po => {
+    const matchesStatus = statusFilter === "All Status" || String(po.status || "").toUpperCase() === statusFilter.toUpperCase();
+    const matchesSearch = searchTerm === "" || 
+      String(po.id).includes(searchTerm) || 
+      String(po.vendor).includes(searchTerm);
+    return matchesStatus && matchesSearch;
+  });
 
   const confirmVoid = async ({ poId, note }) => {
   try {
@@ -185,13 +197,17 @@ const ProcurementManagePurchaseOrders = () => {
         </div>
 
         <div className="flex items-end gap-6">
-          <SearchFilter placeholder="Search by PO# or Vendor..." />
+          <SearchFilter  placeholder="Search by PO# or Vendor..." onSearchChange={(value) => setSearchTerm(value)} />
 
           <div className="flex flex-col gap-1 w-48">
             <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
               Status
             </label>
-            <select className="border border-slate-200 rounded-lg p-2 text-xs text-slate-600 bg-white outline-none">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg p-2 text-xs text-slate-600 bg-white outline-none"
+            >
               <option>All Status</option>
               <option>Draft</option>
               <option>Sent</option>
@@ -200,7 +216,7 @@ const ProcurementManagePurchaseOrders = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 pb-2">
+          {/* <div className="flex items-center gap-2 pb-2">
             <input
               type="checkbox"
               id="voided"
@@ -209,7 +225,7 @@ const ProcurementManagePurchaseOrders = () => {
             <label htmlFor="voided" className="text-xs font-medium text-slate-600">
               Include Voided
             </label>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -244,14 +260,14 @@ const ProcurementManagePurchaseOrders = () => {
                     Loading purchase orders...
                   </td>
                 </tr>
-              ) : poData.length === 0 ? (
+              ) : filteredPoData.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-6 py-8 text-center text-slate-500">
                     No purchase orders found.
                   </td>
                 </tr>
               ) : (
-                poData.map((po) => {
+                filteredPoData.map((po) => {
                   const normalizedStatus = String(po.status || "").toUpperCase();
                   const isDraft = normalizedStatus === "DRAFT";
                   const isSent = normalizedStatus === "SENT";
