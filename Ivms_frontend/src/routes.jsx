@@ -51,88 +51,27 @@ export const router = createBrowserRouter([
     path: "/",
     element: <MainLayout />,
     children: [
+      // --- START UPDATED INVENTORY HUB MODULE ---
       {
-
-  path: "inventory",
-  element: <InventoryDashboard />,
-  children: [
-    {
-      index: true, // This makes DashboardContent the default view
-      element: <DashboardContent />
-    },
-    {
-      path: "register", // Matches /inventory/register
-      element: <InventoryHub_Register />
-    },
-    {
-    path: "search",
-    element: <InventoryHub_Search />,
-    },
-    {
-      path: "modify", // Matches /inventory/modify
-      element: <InventoryHub_Modify />
-    },
-    {
-      path: "archive", // Matches /inventory/archive
-      element: <InventoryHub_Archive />
-    },
-    {
-      path: "inventoryHub",
-      element: <InventoryHub />
-    },
-  ]
-},
-      {
-        path:"search",
-        element:<InventoryHub_Search/>
+        path: "inventory",
+        element: <InventoryDashboard />,
+        children: [
+          { index: true, element: <DashboardContent /> },
+          { path: "register", element: <InventoryHub_Register /> },
+          { path: "search", element: <InventoryHub_Search /> },
+          { path: "modify", element: <InventoryHub_Modify /> },
+          { path: "archive", element: <InventoryHub_Archive /> },
+          { path: "inventoryHub", element: <InventoryHub /> },
+        ]
       },
+      // --- END UPDATED INVENTORY HUB MODULE ---
 
       // 2. Procurement Module Routes
       {
         path: "procurement",
-        element: <ProcurementLayout />, 
-
-        path: "inventory",
-        element: <InventoryDashboard />,
-
-        children: [
-          {
-            index: true,
-            element: <DashboardContent />
-          },
-          {
-            path: "register",
-            element: <InventoryHub_Register />
-          },
-          {
-            path: "modify",
-            element: <InventoryHub_Modify />
-          },
-          {
-            path: "archive",
-            element: <InventoryHub_Archive />
-          },
-          {
-            path: "inventoryHub",
-            element: <InventoryHub />
-          }
-        ]
-      },
-      {
-        path: "search",
-        element: <InventoryHub_Search />
-      },
-
-      // Procurement Module Routes
-      {
-        path: "procurement",
         element: <ProcurementLayout />,
         children: [
-          { index: true, element: <DashboardContent /> },
-          { path: "register", element: <InventoryHub_Register /> },
-          { path: "modify", element: <InventoryHub_Modify /> },
-          { path: "archive", element: <InventoryHub_Archive /> },
-          { path: "inventoryHub", element: <InventoryHub /> },
+          // Keep your procurement specific children here
         ]
       },
 
@@ -168,14 +107,8 @@ export const router = createBrowserRouter([
         element: <SecurityAccessControl />
       },
 
-
-
-
-
-      {
- 
-
       // Supplier Routes
+      {
         path: "supplier",
         element: (
           <div className="w-full h-full">
@@ -183,26 +116,11 @@ export const router = createBrowserRouter([
           </div>
         ),
         children: [
-          {
-            index: true,
-            element: <SupplierPortal />
-          },
-          {
-            path: "manage",
-            element: <ManageVendors />
-          },
-          {
-            path: "register",
-            element: <RegisterVendor />
-          },
-          {
-            path: "analytics",
-            element: <VendorAnalytics />
-          },
-          {
-            path: "directory",
-            element: <VendorDirectory />
-          }
+          { index: true, element: <SupplierPortal /> },
+          { path: "manage", element: <ManageVendors /> },
+          { path: "register", element: <RegisterVendor /> },
+          { path: "analytics", element: <VendorAnalytics /> },
+          { path: "directory", element: <VendorDirectory /> }
         ]
       },
 
@@ -212,44 +130,8 @@ export const router = createBrowserRouter([
         element: <SalesEngine />
       },
 
-      // Other Placeholder Pages
-      {
-        path: "audit",
-        element: (
-          <PlaceholderPage
-            title="Audit Trail"
-            icon="📋"
-            description="Monitor system activities and changes"
-          />
-        )
-      },
-      {
-        path: "user-management",
-        element: (
-          <PlaceholderPage
-            title="System Settings"
-            icon="⚙️"
-            description="Configure system preferences"
-          />
-        )
-      },
-
-
-
-
       // 404 Not Found Handler
-      { path: '*', element: <NotFound /> },
-
-      
-
-
-
-      // 404
-      {
-        path: "*",
-        element: <NotFound />
-      }
-
+      { path: '*', element: <NotFound /> }
     ]
   }
 ]);

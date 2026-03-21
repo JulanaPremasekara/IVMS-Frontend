@@ -86,18 +86,32 @@ const InventoryHub_Register = () => {
     }
   };
 
-  // --- 3. Handle Product Registration (Saves to DB) ---
   const handleRegisterProduct = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.post('http://localhost:8083/api/v1/products', formData);
-      alert(`Success! Product registered with SKU: ${response.data.skuCode}`);
-      // Optional: Reset form here
-    } catch (err) {
-      console.error(err);
-      alert("Error registering product. Ensure the category exists in the database.");
+  e.preventDefault();
+  
+  // Create a copy of the data and convert empty strings to null for numeric fields
+  const submissionData = { ...formData };
+  
+  const numericFields = ['length', 'width', 'height', 'powerUsage', 'weight', 'unitPrice', 'initialStock', 'reorderThreshold'];
+  
+  numericFields.forEach(field => {
+    if (submissionData[field] === '') {
+      submissionData[field] = null;
+    } else {
+      // Ensure values sent are actually numbers
+      submissionData[field] = Number(submissionData[field]);
     }
-  };
+  });
+
+  try {
+    const response = await axios.post('http://localhost:8083/api/v1/products', submissionData);
+    alert(`Success! Product registered with SKU: ${response.data.skuCode}`);
+    // Optional: setFormData(initialState) here to reset
+  } catch (err) {
+    console.error(err);
+    alert("Error registering product. Check console for details.");
+  }
+};
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -169,23 +183,58 @@ const InventoryHub_Register = () => {
         </FormSection>
 
         <FormSection title="Technical Specifications">
-          <InputField label="Length (cm)" name="length" value={formData.length} onChange={handleInputChange} placeholder="0.00" required type="number" />
-          <InputField label="Width (cm)" name="width" value={formData.width} onChange={handleInputChange} placeholder="0.00" required type="number" />
-          <InputField label="Height (cm)" name="height" value={formData.height} onChange={handleInputChange} placeholder="0.00" required type="number" />
-          <InputField label="Power Usage (Watts)" name="powerUsage" value={formData.powerUsage} onChange={handleInputChange} placeholder="150" required type="number" />
-          <InputField label="Weight (kg)" name="weight" value={formData.weight} onChange={handleInputChange} placeholder="Optional" type="number" />
-          <div className="md:col-span-2 lg:col-span-3">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-            <textarea 
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Enter product description..." 
-              rows="3" 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-            />
-          </div>
-        </FormSection>
+  <InputField 
+    label="Length (cm)" 
+    name="length" 
+    value={formData.length} 
+    onChange={handleInputChange} 
+    placeholder="Optional" 
+    type="number" 
+  />
+  <InputField 
+    label="Width (cm)" 
+    name="width" 
+    value={formData.width} 
+    onChange={handleInputChange} 
+    placeholder="Optional" 
+    type="number" 
+  />
+  <InputField 
+    label="Height (cm)" 
+    name="height" 
+    value={formData.height} 
+    onChange={handleInputChange} 
+    placeholder="Optional" 
+    type="number" 
+  />
+  <InputField 
+    label="Power Usage (Watts)" 
+    name="powerUsage" 
+    value={formData.powerUsage} 
+    onChange={handleInputChange} 
+    placeholder="Optional" 
+    type="number" 
+  />
+  <InputField 
+    label="Weight (kg)" 
+    name="weight" 
+    value={formData.weight} 
+    onChange={handleInputChange} 
+    placeholder="Optional" 
+    type="number" 
+  />
+  <div className="md:col-span-2 lg:col-span-3">
+    <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+    <textarea 
+      name="description"
+      value={formData.description}
+      onChange={handleInputChange}
+      placeholder="Enter product description (Optional)..." 
+      rows="3" 
+      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+    />
+  </div>
+</FormSection>
 
         <FormSection title="Pricing & Stock">
           <InputField label="Unit Price ($)" name="unitPrice" value={formData.unitPrice} onChange={handleInputChange} placeholder="0.00" required type="number" />

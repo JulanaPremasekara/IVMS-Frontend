@@ -6,14 +6,17 @@ import {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutGrid, label: 'Dashboard', path: '/' },
+  // 1. Inventory Hub Module
   { 
     id: 'inventory', 
     icon: Package, 
     label: 'Inventory Hub', 
     path: '/inventory',
-    children: ['/inventory/register', '/inventory/modify', '/inventory/archive','/inventory/inventoryHub']
+    // Added specific child paths for clarity
+    children: ['/inventory/register', '/inventory/modify', '/inventory/archive', '/inventory/inventoryHub']
   },
-  { id: 'search', icon: Search, label: 'Inventory Search', path: '/search' },
+  
+  
   { id: 'sales', icon: ShoppingCart, label: 'Sales Engine', path: '/sales' },
   { id: 'procurement', icon: ShoppingCart, label: 'Procurement Hub', path: '/procurement',children: ['/procurement/track-shipments', '/procurement/create-purchase-order', '/procurement/manage-purchase-orders', '/procurement/receive-goods'] },
   { id: 'supplier', icon: Building2, label: 'Supplier Portal', path: '/supplier', children: ['supplier/manage','supplier/analytics']},

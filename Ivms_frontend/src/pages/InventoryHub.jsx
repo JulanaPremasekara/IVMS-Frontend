@@ -27,18 +27,14 @@ const InventoryHub = () => {
     fetchProducts();
   }, []);
 
-  // --- 3. Filter logic for the search bar ---
+ // Inside InventoryHub.jsx - Update the filter logic
 const filteredProducts = products.filter(p => {
-    // 1. Search Logic: Check if Name or SKU matches what you typed
     const matchesSearch = 
         p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         p.skuCode?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // 2. Status Logic: Only show products that are NOT archived
-    // We check both 'isActive' and 'active' to be safe against naming mismatches
-    const isActuallyActive = p.isActive !== false && p.active !== false;
-
-    return matchesSearch && isActuallyActive;
+    // Strict check: only show if isActive is explicitly true
+    return matchesSearch && p.isActive === true;
 });
 
   if (loading) return (
@@ -97,7 +93,7 @@ const handleArchiveRequest = async (product) => {
             <input 
               type="text" 
               placeholder="Search SKU or product..." 
-              value={searchTerm}
+              value={searchTerm || ""}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" 
             />
