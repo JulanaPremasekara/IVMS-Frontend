@@ -28,10 +28,18 @@ const InventoryHub = () => {
   }, []);
 
   // --- 3. Filter logic for the search bar ---
-  const filteredProducts = products.filter(p => 
-    p.productName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.skuCode?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+const filteredProducts = products.filter(p => {
+    // 1. Search Logic: Check if Name or SKU matches what you typed
+    const matchesSearch = 
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.skuCode?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // 2. Status Logic: Only show products that are NOT archived
+    // We check both 'isActive' and 'active' to be safe against naming mismatches
+    const isActuallyActive = p.isActive !== false && p.active !== false;
+
+    return matchesSearch && isActuallyActive;
+});
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -41,23 +49,24 @@ const InventoryHub = () => {
   );
   // --- 4. Archiving Logic ---
 const handleArchiveRequest = async (product) => {
-    // Accessing properties from the object 'p' you passed in
     const confirmed = window.confirm(`Archive ${product.name}? This will remove it from AI forecasts.`);
     
     if (confirmed) {
         try {
-            // Ensure the port (8083) matches your running InventoryHUB instance
+            // 1. Correct PATCH call to port 8083
             await axios.patch(`http://localhost:8083/api/v1/archive/${product.id}`);
+            
             alert("Product archived successfully.");
-            setQuery(''); // Clear search to refresh view
+            
+            // 2. Remove the archived product from the UI list immediately
+            setProducts(prevProducts => prevProducts.filter(p => p.id !== product.id));
+            
         } catch (err) {
-            // This captures your Spring Boot "Stock levels" validation error
-            const message = err.response?.data || "Archive failed";
+            const message = err.response?.data || "Archive failed. Ensure backend is running on 8083.";
             alert("Action Blocked: " + message);
         }
     }
 };
-
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-8">

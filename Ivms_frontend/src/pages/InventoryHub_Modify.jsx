@@ -1,45 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronRight, Search, Save, Package } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronRight, Search, Save, Package, List } from 'lucide-react';
 import axios from 'axios';
 import BackButton from "../components/ui/BackButton";
 
 const InventoryHub_Modify = () => {
     const [query, setQuery] = useState("");
+    const [results, setResults] = useState([]); // Fixed: Added missing state
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [newQuantity, setNewQuantity] = useState("");
 
     const handleSearch = async () => {
-    if (query.length < 2) return; // Don't search for single letters
-    try {
-        // This endpoint now checks both Name and SKU in the backend
-        const res = await axios.get(`http://localhost:8083/api/v1/products/inventory/search?query=${query}`);
-        
-        if (res.data.length > 0) {
-            setResults(res.data); // Show a list of matches
-            setSelectedProduct(null); // Clear previous selection
-        } else {
-            alert("No matches found for that Name or SKU.");
+        if (query.length < 2) return; 
+        try {
+            const res = await axios.get(`http://localhost:8083/api/v1/products/inventory/search?query=${query}`);
+            
+            if (res.data.length > 0) {
+                setResults(res.data); // Now defined!
+                setSelectedProduct(null); // Reset selection to show the list
+            } else {
+                setResults([]);
+                alert("No matches found for that Name or SKU.");
+            }
+        } catch (err) {
+            console.error("Search failed", err);
+            alert("Search failed. Please check your backend connection.");
         }
-    } catch (err) {
-        console.error("Search failed", err);
-    }
-};
+    };
 
-const handleUpdate = async () => {
-    try {
-        // TRIGGER THE QUEUE: This PUT request calls the service that notifies RabbitMQ
-        await axios.put(`http://localhost:8083/api/v1/products/stock/update/${selectedProduct.id}?quantity=${newQuantity}`);
-        
-        alert("Stock Update Processed! RabbitMQ has notified the Procurement listener.");
-        
-        // Clear everything after success
-        setResults([]);
-        setSelectedProduct(null);
-        setQuery("");
-    } catch (err) {
-        alert("Update Error: " + err.message);
-    }
-};
+    const handleSelectProduct = (product) => {
+        setSelectedProduct(product);
+        setNewQuantity(product.quantity); // Pre-fill the input with current stock
+        setResults([]); // Hide results list after selection
+    };
+
+    const handleUpdate = async () => {
+        try {
+            await axios.put(`http://localhost:8083/api/v1/products/stock/update/${selectedProduct.id}?quantity=${newQuantity}`);
+            
+            alert("Stock Update Processed! RabbitMQ has notified the Procurement listener.");
+            
+            // Clear everything after success
+            setResults([]);
+            setSelectedProduct(null);
+            setQuery("");
+            setNewQuantity("");
+        } catch (err) {
+            alert("Update Error: " + err.message);
+        }
+    };
 
     return (
         <div className="p-10 bg-white min-h-screen">
@@ -55,6 +63,8 @@ const handleUpdate = async () => {
 
             <div className="border border-gray-100 rounded-2xl p-10 shadow-sm max-w-[100%] bg-gray-50">
                 <h2 className="text-lg font-bold text-gray-900 mb-8">SKU Selection</h2>
+                
+                {/* Search Input Group */}
                 <div className="flex gap-4 mb-8">
                     <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -62,14 +72,43 @@ const handleUpdate = async () => {
                             type="text" 
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             placeholder="Enter SKU ID or Product Name" 
                             className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-                    <button onClick={handleSearch} className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-700">Search</button>
+                    <button onClick={handleSearch} className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                        Search
+                    </button>
                 </div>
 
-                {/* Edit Form (Appears after search) */}
+                {/* 1. Search Results List (Shown when results are found) */}
+                {results.length > 0 && (
+                    <div className="mb-8 bg-white border border-indigo-100 rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2">
+                        <div className="bg-indigo-50 p-4 border-b border-indigo-100 flex items-center text-indigo-700 font-bold">
+                            <List size={18} className="mr-2" />
+                            Select a Product to Edit
+                        </div>
+                        {results.map((product) => (
+                            <div 
+                                key={product.id}
+                                onClick={() => handleSelectProduct(product)}
+                                className="p-5 hover:bg-gray-50 cursor-pointer border-b last:border-0 flex justify-between items-center transition-colors"
+                            >
+                                <div>
+                                    <p className="font-bold text-gray-900">{product.name}</p>
+                                    <p className="text-sm text-gray-500">SKU: {product.skuCode}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-medium text-gray-400">Current Stock</p>
+                                    <p className="font-bold text-indigo-600">{product.quantity}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* 2. Edit Form (Shown after a product is selected) */}
                 {selectedProduct && (
                     <div className="bg-white p-8 rounded-2xl border border-blue-100 shadow-md animate-in fade-in slide-in-from-top-4">
                         <div className="flex items-center mb-6 text-blue-600">
@@ -79,20 +118,22 @@ const handleUpdate = async () => {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Current Stock Level</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Adjust Stock Level</label>
                                 <input 
                                     type="number" 
                                     value={newQuantity}
                                     onChange={(e) => setNewQuantity(e.target.value)}
                                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <p className="mt-2 text-sm text-gray-500">Threshold: {selectedProduct.reorderThreshold} units</p>
+                                <p className="mt-2 text-sm text-gray-500">
+                                    Low Stock Threshold: <span className="font-bold text-red-500">{selectedProduct.reorderThreshold} units</span>
+                                </p>
                             </div>
                             
                             <div className="flex items-end">
                                 <button 
                                     onClick={handleUpdate}
-                                    className="w-full flex items-center justify-center bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg"
+                                    className="w-full flex items-center justify-center bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg active:scale-95"
                                 >
                                     <Save size={20} className="mr-2" /> Update & Notify Queue
                                 </button>
