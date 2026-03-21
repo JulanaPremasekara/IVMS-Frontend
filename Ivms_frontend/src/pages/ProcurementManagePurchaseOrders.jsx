@@ -1,73 +1,85 @@
-import { Copy, Download, Eye, FileText, Filter, MoreVertical, Trash2 } from "lucide-react";
+import {
+  Download,
+  Eye,
+  FileText,
+  Filter,
+  MoreVertical,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import PurchaseOrderDetailsModal from "./PurchaseOrderDetailsModal";
 import VoidPurchaseOrderModal from "./VoidPurchaseOrderModal";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import { SearchFilter } from '../components/ui/SearchFilter';
-import { useState } from "react";
+import { SearchFilter } from "../components/ui/SearchFilter";
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const ProcurementManagePurchaseOrders = () => {
-  const [poData, setPoData] = useState([
-    {
-      id: "PO-2026-1001",
-      vendor: "TechSupply Inc.",
-      status: "Sent",
-      date: "Feb 01, 2026",
-      delivery: "Feb 25, 2026",
-      total: 38250,
-      creator: "John Smith",
-      items: [
-        "Premium Wireless Headphones",
-        "Smart Watch Series 5",
-        "Bluetooth Speaker",
-      ],
-    },
-    {
-      id: "PO-2026-1002",
-      vendor: "GlobalParts Corp",
-      status: "Draft",
-      date: "Feb 20, 2026",
-      delivery: "Mar 05, 2026",
-      total: 12450,
-      creator: "Sarah Johnson",
-      items: ["Bulk Sensors"],
-    },
-    {
-      id: "PO-2026-1003",
-      vendor: "TechSupply Inc.",
-      status: "Draft",
-      date: "Feb 21, 2026",
-      delivery: "Mar 10, 2026",
-      total: 38250,
-      creator: "John Smith",
-      flag: "Duplicate",
-      items: [],
-    },
-    {
-      id: "PO-2026-1004",
-      vendor: "ElectroWholesale Ltd",
-      status: "Received",
-      date: "Jan 15, 2026",
-      delivery: "Feb 10, 2026",
-      total: 54800,
-      creator: "Mike Davis",
-      items: [],
-    },
-  ]);
+  const navigate = useNavigate();
+
+  const [poData, setPoData] = useState([]);
+  const [poDataLoading, setPoDataLoading] = useState(false);
 
   // UI state
   const [activeMenuId, setActiveMenuId] = useState(null);
   const [selectedPO, setSelectedPO] = useState(null);
 
-  // conditional-render “mode”
   // "none" | "details" | "void"
   const [modal, setModal] = useState("none");
-
   const [voidConfirmText, setVoidConfirmText] = useState("");
+
+  //filter logic
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const menuRef = useRef(null);
 
   const isDetailsOpen = modal === "details";
   const isVoidOpen = modal === "void";
 
-  const handleActionClick = (id) => {
+  useEffect(() => {
+    loadPoData();
+  }, []);
+
+  const loadPoData = async () => {
+    setPoDataLoading(true);
+    try {
+      const res = await axios.get("http://localhost:8081/api/v1/purchaseOrders");
+      setPoData(Array.isArray(res.data) ? res.data : []);
+    } catch (e) {
+      console.error("Failed to load purchase orders", e);
+      setPoData([]);
+    } finally {
+      setPoDataLoading(false);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setActiveMenuId(null);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setActiveMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const handleActionClick = (e, id) => {
+    e.stopPropagation();
     setActiveMenuId((prev) => (prev === id ? null : id));
   };
 
@@ -90,14 +102,90 @@ const ProcurementManagePurchaseOrders = () => {
     setVoidConfirmText("");
   };
 
-  const confirmVoid = (po) => {
-    // Example: update status locally (you can replace with API call)
+  const filteredPoData = poData.filter(po => {
+    const matchesStatus = statusFilter === "All Status" || String(po.status || "").toUpperCase() === statusFilter.toUpperCase();
+    const matchesSearch = searchTerm === "" || 
+      String(po.id).includes(searchTerm) || 
+      String(po.vendor).includes(searchTerm);
+    return matchesStatus && matchesSearch;
+  });
+
+  const confirmVoid = async ({ poId, note }) => {
+  try {
+    await axios.put(
+      `http://localhost:8081/api/v1/purchaseOrders/${poId}/void`,
+      { note }
+    );
+
     setPoData((prev) =>
       prev.map((x) =>
-        x.id === po.id ? { ...x, status: "Voided", voidedAt: new Date() } : x
+        x.id === poId
+          ? { ...x, status: "VOIDED", voidedAt: new Date(), voidNote: note }
+          : x
       )
     );
+
     closeModal();
+  } catch (error) {
+    console.error("Failed to void purchase order", error);
+    alert("Failed to void purchase order.");
+  }
+};
+
+  const openEdit = async (po) => {
+    setActiveMenuId(null);
+
+    try {
+      // fetch full PO details before going to edit page
+      const res = await axios.get(
+        `http://localhost:8081/api/v1/purchaseOrders/${po.id}`
+      );
+
+      navigate("/procurement/create-purchase-order", {
+        state: {
+          mode: "edit",
+          po: res.data,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to load PO details for editing", error);
+
+      // fallback: navigate with current row data if detail API fails
+      navigate("/procurement/create-purchase-order", {
+        state: {
+          mode: "edit",
+          po,
+        },
+      });
+    }
+  };
+
+  const downloadPurchaseOrderPdf = async (po) => {
+    try {
+      // Adjust endpoint if your backend PDF route is different
+      const response = await axios.get(
+        `http://localhost:8081/api/v1/purchaseOrders/${po.id}/pdf`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `purchase-order-${po.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+      setActiveMenuId(null);
+    } catch (error) {
+      console.error("Failed to download PDF", error);
+      alert("Failed to download PDF.");
+    }
   };
 
   return (
@@ -109,13 +197,17 @@ const ProcurementManagePurchaseOrders = () => {
         </div>
 
         <div className="flex items-end gap-6">
-          <SearchFilter placeholder="Search by PO# or Vendor..." />
+          <SearchFilter  placeholder="Search by PO# or Vendor..." onSearchChange={(value) => setSearchTerm(value)} />
 
           <div className="flex flex-col gap-1 w-48">
             <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
               Status
             </label>
-            <select className="border border-slate-200 rounded-lg p-2 text-xs text-slate-600 bg-white outline-none">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-slate-200 rounded-lg p-2 text-xs text-slate-600 bg-white outline-none"
+            >
               <option>All Status</option>
               <option>Draft</option>
               <option>Sent</option>
@@ -124,7 +216,7 @@ const ProcurementManagePurchaseOrders = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 pb-2">
+          {/* <div className="flex items-center gap-2 pb-2">
             <input
               type="checkbox"
               id="voided"
@@ -133,7 +225,7 @@ const ProcurementManagePurchaseOrders = () => {
             <label htmlFor="voided" className="text-xs font-medium text-slate-600">
               Include Voided
             </label>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -157,89 +249,137 @@ const ProcurementManagePurchaseOrders = () => {
                 <th className="px-6 py-3">Expected Delivery</th>
                 <th className="px-6 py-3">Total Amount</th>
                 <th className="px-6 py-3">Created By</th>
-                <th className="px-6 py-3">Flags</th>
                 <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
 
             <tbody className="text-xs divide-y divide-slate-50">
-              {poData.map((po) => (
-                <tr
-                  key={po.id}
-                  className="hover:bg-slate-50/50 transition-colors group"
-                >
-                  <td
-                    className="px-6 py-4 font-bold text-blue-600 hover:underline cursor-pointer"
-                    onClick={() => openDetails(po)}
-                  >
-                    {po.id}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-slate-800">
-                    {po.vendor}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={po.status} />
-                  </td>
-                  <td className="px-6 py-4 text-slate-500">{po.date}</td>
-                  <td className="px-6 py-4 text-slate-500">{po.delivery}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800">
-                    ${po.total.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-slate-500">{po.creator}</td>
-                  <td className="px-6 py-4">
-                    {po.flag && (
-                      <span className="bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded text-[9px] font-bold border border-orange-100 flex items-center gap-1 w-fit">
-                        <Copy className="w-2.5 h-2.5" /> {po.flag}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="px-6 py-4 text-right relative">
-                    <button
-                      onClick={() => handleActionClick(po.id)}
-                      className={`p-1 rounded transition-all ${
-                        activeMenuId === po.id
-                          ? "bg-slate-100 text-slate-900"
-                          : "text-slate-400 group-hover:text-slate-600"
-                      }`}
-                      aria-label="Actions"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-
-                    {activeMenuId === po.id && (
-                      <div className="absolute right-6 mt-2 w-48 bg-white border border-slate-100 shadow-xl rounded-lg z-50 py-1 text-left">
-                        <button
-                          onClick={() => openDetails(po)}
-                          className="w-full px-4 py-2 text-slate-600 hover:bg-slate-50 flex items-center gap-3 transition-colors"
-                        >
-                          <Eye className="w-4 h-4 text-slate-400" /> View Details
-                        </button>
-
-                        <button className="w-full px-4 py-2 text-slate-600 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                          <Download className="w-4 h-4 text-slate-400" /> Download
-                          PDF
-                        </button>
-
-                        <hr className="my-1 border-slate-50" />
-
-                        <button
-                          onClick={() => openVoid(po)}
-                          className="w-full px-4 py-2 text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" /> Void / Cancel
-                        </button>
-                      </div>
-                    )}
+              {poDataLoading ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-slate-500">
+                    Loading purchase orders...
                   </td>
                 </tr>
-              ))}
+              ) : filteredPoData.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-slate-500">
+                    No purchase orders found.
+                  </td>
+                </tr>
+              ) : (
+                filteredPoData.map((po) => {
+                  const normalizedStatus = String(po.status || "").toUpperCase();
+                  const isDraft = normalizedStatus === "DRAFT";
+                  const isSent = normalizedStatus === "SENT";
+                  const canVoid = isDraft || isSent;
+                  const isMenuOpen = activeMenuId === po.id;
+
+                  return (
+                    <tr
+                      key={po.id}
+                      className="hover:bg-slate-50/50 transition-colors group"
+                    >
+                      <td
+                        className="px-6 py-4 font-bold text-blue-600 hover:underline cursor-pointer"
+                        onClick={() => openDetails(po)}
+                      >
+                        {po.id}
+                      </td>
+
+                      <td className="px-6 py-4 font-medium text-slate-800">
+                        {po.vendor}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <StatusBadge status={po.status} />
+                      </td>
+
+                      <td className="px-6 py-4 text-slate-500">{po.date}</td>
+                      <td className="px-6 py-4 text-slate-500">{po.delivery}</td>
+
+                      <td className="px-6 py-4 font-bold text-slate-800">
+                        ${Number(po.total || 0).toLocaleString()}
+                      </td>
+
+                      <td className="px-6 py-4 text-slate-500">{po.creator}</td>
+
+                      <td className="px-6 py-4 text-right relative">
+                        <div
+                          className="inline-block relative"
+                          ref={isMenuOpen ? menuRef : null}
+                        >
+                          <button
+                            onClick={(e) => handleActionClick(e, po.id)}
+                            className={`p-2 rounded-md transition-all ${
+                              isMenuOpen
+                                ? "bg-slate-100 text-slate-900"
+                                : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            }`}
+                            aria-label="Actions"
+                            aria-expanded={isMenuOpen}
+                            aria-haspopup="menu"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div
+                              className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 shadow-xl rounded-lg z-50 py-1 text-left"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => openDetails(po)}
+                                className="w-full px-4 py-2 text-slate-600 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                              >
+                                <Eye className="w-4 h-4 text-slate-400" />
+                                View Details
+                              </button>
+
+                              <button
+                                onClick={() => downloadPurchaseOrderPdf(po)}
+                                className="w-full px-4 py-2 text-slate-600 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                              >
+                                <Download className="w-4 h-4 text-slate-400" />
+                                Download PDF
+                              </button>
+
+                              {isDraft && (
+                                <button
+                                  onClick={() => openEdit(po)}
+                                  className="w-full px-4 py-2 text-slate-600 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                                >
+                                  <Pencil className="w-4 h-4 text-slate-400" />
+                                  Edit
+                                </button>
+                              )}
+
+                              <hr className="my-1 border-slate-50" />
+
+                              {canVoid && (
+                                  <>
+                                    <hr className="my-1 border-slate-50" />
+                                    <button
+                                      onClick={() => openVoid(po)}
+                                      className="w-full px-4 py-2 text-red-500 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Void / Cancel
+                                    </button>
+                                  </>
+                                )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ✅ Conditional Rendering as Components */}
       {isDetailsOpen && (
         <PurchaseOrderDetailsModal
           po={selectedPO}

@@ -1,185 +1,307 @@
-import React from 'react';
-import { 
-  History, Search, ArrowLeft, Download, RefreshCw, 
-  Filter, Calendar, User, Database, AlertCircle, Info, Eye
+import React, { useState, useEffect } from 'react';
+import {
+  History, Search, RefreshCw, Download, Filter, Calendar, User,
+  Database, AlertCircle, Eye, X, ArrowLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const AuditLogs = () => {
   const navigate = useNavigate();
+  const [logs, setLogs] = useState([]);
+  const [filteredLogs, setFilteredLogs] = useState([]);
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const auditLogs = [
-    { timestamp: '2026-02-22 14:35:22', userId: 'USR-1021', user: 'John Doe', module: 'Inventory', action: 'Update', entity: 'SKU-2048', oldValue: '{"stock_qty": 500, "unit_price"...', newValue: '{"stock_qty": 450, "unit_price"...', severity: 'Info', status: 'Normal' },
-    { timestamp: '2026-02-22 13:22:10', userId: 'USR-1035', user: 'Sarah Chen', module: 'Procurement', action: 'Delete', entity: 'PO-8821', oldValue: '{"po_number": "PO-8821", "tota...', newValue: 'null...', severity: 'Warning', status: 'Flagged' },
-    { timestamp: '2026-02-22 11:15:48', userId: 'USR-9999', user: 'Unknown User', module: 'Auth', action: 'Login Attempt', entity: 'admin@company.com', oldValue: 'null...', newValue: '{"status": "failed", "reason":...', severity: 'Critical', status: 'Flagged' },
-    { timestamp: '2026-02-22 10:42:33', userId: 'USR-1023', user: 'Michael Torres', module: 'Finance', action: 'Create', entity: 'INV-5024', oldValue: 'null...', newValue: '{"invoice_number": "INV-5024",...', severity: 'Info', status: 'Normal' },
-    { timestamp: '2026-02-22 09:18:55', userId: 'USR-0001', user: 'Admin User', module: 'Inventory', action: 'Stock Adjustment', entity: 'SKU-3041', oldValue: '{"stock_qty": 1200}...', newValue: '{"stock_qty": 1100, "adjustmen...', severity: 'Warning', status: 'Normal' },
-    { timestamp: '2026-02-21 16:45:12', userId: 'USR-1007', user: 'Emily Johnson', module: 'Inventory', action: 'Update', entity: 'SKU-1825', oldValue: '{"location": "A-12", "stock_qt...', newValue: '{"location": "B-05", "stock_qt...', severity: 'Info', status: 'Normal' },
-  ];
+  // Filter states
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [actionType, setActionType] = useState('All actions');
+  const [moduleFilter, setModuleFilter] = useState('All modules');
 
-  const getSeverityStyle = (severity) => {
-    switch (severity) {
-      case 'Critical': return 'bg-rose-50 text-rose-600 border-rose-100';
-      case 'Warning': return 'bg-amber-50 text-amber-600 border-amber-100';
-      default: return 'bg-blue-50 text-blue-600 border-blue-100';
+  useEffect(() => {
+    const fetchAuditLogs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('http://localhost:8080/api/admin/audit/logs', {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        });
+        if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
+        const data = await response.json();
+        setLogs(data);
+        setFilteredLogs(data);
+      } catch (err) {
+        console.error('Failed to fetch audit logs:', err);
+        setError(err.message || 'Failed to load audit logs.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAuditLogs();
+  }, []);
+
+  const applyFilters = () => {
+    let result = [...logs];
+
+    if (dateFrom) {
+      const from = `${dateFrom}T00:00:00`;
+      result = result.filter(log => log.timestamp >= from);
     }
+    if (dateTo) {
+      const to = `${dateTo}T23:59:59`;
+      result = result.filter(log => log.timestamp <= to);
+    }
+
+    if (userSearch.trim()) {
+      const term = userSearch.toLowerCase().trim();
+      result = result.filter(log =>
+        (log.user?.toLowerCase() || '').includes(term) ||
+        (log.userId?.toLowerCase() || '').includes(term)
+      );
+    }
+
+    if (actionType !== 'All actions') {
+      result = result.filter(log => log.action === actionType);
+    }
+    if (moduleFilter !== 'All modules') {
+      result = result.filter(log => log.module === moduleFilter);
+    }
+
+    setFilteredLogs(result);
+  };
+
+  const resetFilters = () => {
+    setDateFrom('');
+    setDateTo('');
+    setUserSearch('');
+    setActionType('All actions');
+    setModuleFilter('All modules');
+    setFilteredLogs([...logs]);
   };
 
   const getStatusStyle = (status) => {
-    return status === 'Flagged' ? 'text-rose-600 font-bold' : 'text-emerald-600 font-medium';
+    return status === 'Flagged'
+      ? 'text-rose-700 font-bold'
+      : 'text-emerald-700 font-medium';
   };
 
+  const formatTimestamp = (ts) => {
+    if (!ts) return '—';
+    try {
+      const date = new Date(ts);
+      return date.toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      });
+    } catch {
+      return ts;
+    }
+  };
+
+  const exportToPDF = () => {
+    if (filteredLogs.length === 0) {
+      alert('No audit logs to export.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    doc.setFontSize(16);
+    doc.text('System Audit Logs', 14, 15);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+    doc.text(`Total records: ${filteredLogs.length}`, 14, 27);
+
+    const tableColumn = [
+      'Timestamp', 'User', 'User ID', 'Module', 'Action', 'Entity', 'Status'
+    ];
+
+    const tableRows = filteredLogs.map(log => [
+      formatTimestamp(log.timestamp) || '—',
+      log.user || '—',
+      log.userId || '—',
+      log.module || '—',
+      log.action || '—',
+      log.entity || '—',
+      log.status || 'Normal',
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 35,
+      styles: { fontSize: 9, cellPadding: 3, overflow: 'linebreak', halign: 'left' },
+      headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [240, 244, 248] },
+      columnStyles: {
+        0: { cellWidth: 38 },  // Timestamp
+        1: { cellWidth: 32 },  // User
+        2: { cellWidth: 24 },  // User ID
+        3: { cellWidth: 24 },  // Module
+        4: { cellWidth: 28 },  // Action
+        5: { cellWidth: 35 },  // Entity
+        6: { cellWidth: 25 },  // Status
+      },
+      margin: { top: 35, left: 14, right: 14 },
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+    doc.save(`audit-logs-${today}.pdf`);
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-2xl w-full text-center">
+          <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+          <h2 className="text-xl font-bold text-red-700 mb-2">Error</h2>
+          <p className="text-red-600">{error}</p>
+          <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-red-600 text-white rounded-lg">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6 max-w-[1600px] mx-auto">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-800">System Audit Logs</h1>
-            <span className="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase flex items-center gap-1">
-              <History size={10} /> Compliance & Security
-            </span>
-          </div>
-          <p className="text-slate-500 text-sm mt-1">Track and monitor all system activities</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50">
-            <RefreshCw size={14} /> Refresh Logs
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#1e3a8a] text-white rounded-lg text-xs font-bold hover:bg-blue-900 shadow-lg shadow-blue-100">
-            <Download size={14} /> Export PDF
-          </button>
-        </div>
-      </div>
-
-      {/* SMS Alert Security Feature */}
-      <div className="bg-white border-l-4 border-rose-500 rounded-xl shadow-sm p-4 flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-2 bg-rose-50 text-rose-500 rounded-lg">
-            <AlertCircle size={20} />
-          </div>
+          <button onClick={() => navigate('/admin')} className="flex items-center gap-2 px-5 py-2.5 bg-white border ...">
+            <ArrowLeft size={16} /> Back
+          </button>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">Enable SMS Alerts for Critical Actions</h3>
-              <span className="bg-rose-50 text-rose-600 text-[8px] px-1.5 py-0.5 rounded font-bold uppercase">Security Feature</span>
-            </div>
-            <p className="text-xs text-slate-500">Automatically notify Super Admin via SMS for high risk activities such as mass deletion or failed login attempts</p>
+            <h1 className="text-2xl font-bold text-slate-800">System Audit Logs</h1>
+            <p className="text-slate-500 text-sm mt-1">Track system activities</p>
           </div>
         </div>
-        <div className="w-10 h-5 bg-slate-200 rounded-full relative cursor-pointer">
-          <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full"></div>
+        <div className="flex gap-3">
+          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 ...">
+            <RefreshCw size={16} /> Refresh
+          </button>
+          <button onClick={exportToPDF} disabled={filteredLogs.length === 0} className={`... ${filteredLogs.length === 0 ? 'bg-gray-300' : 'bg-blue-700 text-white'}`}>
+            <Download size={16} /> Export PDF
+          </button>
         </div>
       </div>
 
-      {/* Filter Section */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-3 border-b border-slate-50 bg-slate-50/30 flex items-center gap-2 text-emerald-600">
-          <Filter size={16} />
-          <h3 className="text-sm font-bold">Filter Audit Logs</h3>
+      {/* Filters */}
+      <div className="bg-white rounded-xl border shadow-sm">
+        <div className="px-6 py-4 border-b bg-slate-50 flex items-center gap-2 text-blue-700">
+          <Filter size={18} />
+          <h3 className="text-base font-bold">Filter Audit Logs</h3>
         </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><Calendar size={12}/> Date From</label>
-            <input type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-100" />
+        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+              <Calendar size={14} /> Date From
+            </label>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full p-2.5 border rounded-lg" />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><Calendar size={12}/> Date To</label>
-            <input type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-100" />
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+              <Calendar size={14} /> Date To
+            </label>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full p-2.5 border rounded-lg" />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"><User size={12}/> User ID / Name</label>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+              <User size={14} /> User
+            </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input type="text" placeholder="Search user..." className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input type="text" placeholder="Name or ID..." value={userSearch} onChange={e => setUserSearch(e.target.value)}
+                     className="w-full pl-10 pr-4 py-2.5 border rounded-lg" />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Action Type</label>
-            <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none appearance-none">
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase">Action Type</label>
+            <select value={actionType} onChange={e => setActionType(e.target.value)} className="w-full p-2.5 border rounded-lg">
               <option>All actions</option>
+              <option>CREATE</option>
+              <option>UPDATE</option>
+              <option>DELETE</option>
+              <option>DEACTIVATE</option>
+              <option>ACTIVATE</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Module</label>
-            <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none">
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase">Module</label>
+            <select value={moduleFilter} onChange={e => setModuleFilter(e.target.value)} className="w-full p-2.5 border rounded-lg">
               <option>All modules</option>
+              <option>Inventory</option>
+              <option>Procurement</option>
+              <option>Finance</option>
+              <option>Auth</option>
+              <option>User</option>
             </select>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase">Severity Level</label>
-            <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none">
-              <option>All levels</option>
-            </select>
-          </div>
-          <div className="md:col-span-2 flex items-end justify-end gap-2">
-            <button className="px-6 py-2 border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 flex items-center gap-2">
-              ✕ Reset
-            </button>
-            <button className="px-6 py-2 bg-[#1e3a8a] text-white rounded-lg text-xs font-bold hover:bg-blue-900 flex items-center gap-2">
-              <Search size={14} /> Apply Filters
-            </button>
-          </div>
+
+        </div>
+        <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
+          <button onClick={resetFilters} className="px-6 py-2 border rounded-lg">Reset</button>
+          <button onClick={applyFilters} className="px-6 py-2 bg-blue-700 text-white rounded-lg">Apply Filters</button>
         </div>
       </div>
 
-      {/* Results Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Database size={16} className="text-slate-400" />
-            <h3 className="text-sm font-bold text-slate-800">Audit Log Results</h3>
+      {/* Table */}
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Database size={18} className="text-slate-500" />
+            <h3 className="text-base font-bold text-slate-800">Audit Log Results</h3>
           </div>
-          <span className="bg-slate-900 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase">6 Records</span>
+          <span className="bg-slate-800 text-white text-xs px-3 py-1 rounded font-bold">
+            {filteredLogs.length} Records
+          </span>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-400 uppercase text-[9px] font-bold border-b border-slate-100">
-                <th className="px-4 py-3">Timestamp</th>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Module</th>
-                <th className="px-4 py-3">Action Type</th>
-                <th className="px-4 py-3">Entity Affected</th>
-                <th className="px-4 py-3">Old Value</th>
-                <th className="px-4 py-3">New Value</th>
-                <th className="px-4 py-3">Severity</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-center">Actions</th>
+              <tr className="bg-slate-50 text-slate-500 uppercase text-xs font-bold border-b">
+                <th className="px-5 py-3.5">Timestamp</th>
+                <th className="px-5 py-3.5">User</th>
+                <th className="px-5 py-3.5">Module</th>
+                <th className="px-5 py-3.5">Action</th>
+                <th className="px-5 py-3.5">Entity</th>
+                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {auditLogs.map((log, idx) => (
-                <tr key={idx} className={`text-[11px] hover:bg-slate-50/50 transition-colors ${log.status === 'Flagged' ? 'bg-rose-50/30' : ''}`}>
-                  <td className="px-4 py-4 text-slate-500">{log.timestamp}</td>
-                  <td className="px-4 py-4">
-                    <div className="font-bold text-slate-700">{log.user}</div>
-                    <div className="text-[9px] text-slate-400 uppercase">{log.userId}</div>
+            <tbody className="divide-y divide-slate-100">
+              {filteredLogs.map((log, idx) => (
+                <tr key={log.id || idx} className="text-sm hover:bg-slate-50">
+                  <td className="px-5 py-4 text-slate-600 font-medium">{formatTimestamp(log.timestamp)}</td>
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-slate-800">{log.user || '—'}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{log.userId || '—'}</div>
                   </td>
-                  <td className="px-4 py-4">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                      log.module === 'Inventory' ? 'bg-blue-50 text-blue-600' : 
-                      log.module === 'Procurement' ? 'bg-purple-50 text-purple-600' : 
-                      'bg-slate-100 text-slate-600'
-                    }`}>
-                      {log.module}
-                    </span>
+                  <td className="px-5 py-4">{log.module || '—'}</td>
+                  <td className="px-5 py-4 text-slate-700">{log.action || '—'}</td>
+                  <td className="px-5 py-4 font-mono text-blue-600">{log.entity || '—'}</td>
+                  <td className={`px-5 py-4 ${getStatusStyle(log.status)} uppercase font-semibold text-xs`}>
+                    {log.status || 'Normal'}
                   </td>
-                  <td className="px-4 py-4 font-medium text-slate-600">{log.action}</td>
-                  <td className="px-4 py-4 font-mono text-blue-600">{log.entity}</td>
-                  <td className="px-4 py-4 text-slate-400 truncate max-w-[120px]">{log.oldValue}</td>
-                  <td className="px-4 py-4 text-slate-400 truncate max-w-[120px]">{log.newValue}</td>
-                  <td className="px-4 py-4">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border flex items-center w-fit gap-1 ${getSeverityStyle(log.severity)}`}>
-                      <Info size={10} /> {log.severity}
-                    </span>
-                  </td>
-                  <td className={`px-4 py-4 ${getStatusStyle(log.status)} flex items-center gap-1 uppercase text-[9px]`}>
-                    {log.status === 'Flagged' && <span className="w-1 h-1 bg-rose-600 rounded-full"></span>}
-                    {log.status}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <button className="flex items-center justify-center gap-1 text-blue-600 hover:text-blue-800 font-bold transition-colors">
-                      <Eye size={12} /> View Details
+                  <td className="px-5 py-4 text-center">
+                    <button onClick={() => setSelectedLog(log)} className="text-blue-600 hover:text-blue-800">
+                      <Eye size={14} /> Details
                     </button>
                   </td>
                 </tr>
@@ -187,7 +309,66 @@ const AuditLogs = () => {
             </tbody>
           </table>
         </div>
+
+        {filteredLogs.length === 0 && (
+          <div className="py-16 text-center text-slate-500">No matching audit logs found.</div>
+        )}
       </div>
+
+      {/* Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedLog(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold flex items-center gap-3">
+                <Eye size={20} className="text-blue-600" />
+                Audit Log — {selectedLog.entity || '—'}
+              </h2>
+              <button onClick={() => setSelectedLog(null)}><X size={20} /></button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Timestamp</label>
+                  <p className="mt-1 font-medium">{formatTimestamp(selectedLog.timestamp)}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">User</label>
+                  <p className="mt-1">
+                    <span className="font-semibold">{selectedLog.user || '—'}</span>
+                    <span className="text-slate-500 text-sm ml-2">({selectedLog.userId || '—'})</span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Module</label>
+                  <p className="mt-1 font-medium">{selectedLog.module || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Action</label>
+                  <p className="mt-1 font-medium">{selectedLog.action || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Entity</label>
+                  <p className="mt-1 font-mono text-blue-600">{selectedLog.entity || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                  <p className={`mt-1 font-semibold uppercase ${getStatusStyle(selectedLog.status)}`}>
+                    {selectedLog.status || 'Normal'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-slate-50 flex justify-end">
+              <button onClick={() => setSelectedLog(null)} className="px-6 py-2.5 bg-slate-700 text-white rounded-lg">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
