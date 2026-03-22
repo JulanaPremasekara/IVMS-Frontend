@@ -13,7 +13,7 @@ const InventoryHub_Archive = () => {
         const fetchArchived = async () => {
             try {
                 // You'll need an endpoint that calls productRepository.findAllByIsActiveFalse()
-                const res = await axios.get('http://localhost:8083/api/v1/products/archive');
+                const res = await axios.get('http://localhost:8083/api/v1/archive/all');
                 setArchivedProducts(res.data);
             } catch (err) {
                 console.error("Fetch failed", err);
@@ -70,21 +70,29 @@ const InventoryHub_Archive = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map(p => (
-                                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
-                                    <td className="py-4 px-2 font-mono text-blue-600 font-bold">{p.skuCode}</td>
-                                    <td className="py-4 px-2 text-gray-800">{p.name}</td>
-                                    <td className="py-4 px-2 text-center">
-                                        <button 
-                                            onClick={() => handleRestore(p.id, p.name)}
-                                            className="flex items-center mx-auto px-3 py-1 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                                        >
-                                            <RotateCcw size={16} className="mr-2" /> Undo Archive
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
+                            {filtered.length > 0 ? (
+                             filtered.map(p => (
+                             <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                <td className="py-4 px-2 font-mono text-blue-600 font-bold">{p.skuCode}</td>
+                                <td className="py-4 px-2 text-gray-800">{p.name}</td>
+                                <td className="py-4 px-2 text-center">
+                                <button 
+                                onClick={() => handleRestore(p.id, p.name)}
+                                className="flex items-center mx-auto px-3 py-1 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                                >
+                                <RotateCcw size={16} className="mr-2" /> Undo Archive
+                                </button>
+                                </td>
+                             </tr>
+            ))
+    ) : (
+        <tr>
+            <td colSpan="3" className="py-10 text-center text-gray-400">
+                No archived products found.
+            </td>
+        </tr>
+    )}
+</tbody>
                     </table>
                 </div>
             </div>

@@ -28,13 +28,18 @@ const InventoryHub = () => {
   }, []);
 
  // Inside InventoryHub.jsx - Update the filter logic
+// Inside InventoryHub.jsx
 const filteredProducts = products.filter(p => {
     const matchesSearch = 
         p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         p.skuCode?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Strict check: only show if isActive is explicitly true
-    return matchesSearch && p.isActive === true;
+    // Fix: In your Product.java, the field is 'isActive'. 
+    // JSON usually serializes this as 'active' or 'isActive'. 
+    // Let's check for both to be safe:
+    const isActuallyActive = p.isActive !== false && p.active !== false;
+
+    return matchesSearch && isActuallyActive;
 });
 
   if (loading) return (
