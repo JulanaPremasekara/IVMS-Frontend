@@ -1,41 +1,103 @@
-import React from 'react';
-import { Search, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Search, RotateCcw, Loader2 } from 'lucide-react';
+import BackButton from "../components/ui/BackButton";
 
 const InventoryHub_Archive = () => {
-  return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <nav className="flex items-center text-sm text-gray-500 mb-4">
-        <span>Inventory Hub</span> <ChevronRight size={14} className="mx-2" /> 
-        <span>Manage Products</span> <ChevronRight size={14} className="mx-2" />
-        <span className="text-gray-800 font-medium">Archive</span>
-      </nav>
+    const [archivedProducts, setArchivedProducts] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [loading, setLoading] = useState(true);
 
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">Archive / Discontinue Product</h1>
-      <p className="text-gray-500 mb-8">Soft delete process for discontinued products</p>
+    // 1. Fetch only ARCHIVED products
+    useEffect(() => {
+        const fetchArchived = async () => {
+            try {
+                // You'll need an endpoint that calls productRepository.findAllByIsActiveFalse()
+                const res = await axios.get('http://localhost:8083/api/v1/archive/all');
+                setArchivedProducts(res.data);
+            } catch (err) {
+                console.error("Fetch failed", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchArchived();
+    }, []);
 
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6 flex justify-between items-center">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">Archive Management View</h2>
-          <p className="text-gray-500 text-sm">Toggle to view and restore archived products</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <span className="text-gray-500 text-sm">Showing Active</span>
-          <div className="w-12 h-6 bg-gray-200 rounded-full p-1 relative cursor-pointer">
-            <div className="w-4 h-4 bg-white rounded-full shadow-sm absolute right-1"></div>
-          </div>
-        </div>
-      </div>
+    // 2. Restore Action
+    const handleRestore = async (id, name) => {
+        if (window.confirm(`Restore ${name} to active inventory?`)) {
+            try {
+                await axios.patch(`http://localhost:8083/api/v1/archive/restore/${id}`);
+                alert("Product restored!");
+                // Remove from this list immediately
+                setArchivedProducts(prev => prev.filter(p => p.id !== id));
+            } catch (err) {
+                alert("Restore failed: " + (err.response?.data || "Server error"));
+            }
+        }
+    };
 
-      <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-        <h2 className="text-lg font-bold text-gray-800 mb-6">SKU Selection</h2>
-        <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-tight">Search Product</label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input type="text" placeholder="Enter SKU ID or Product Name" className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-lg focus:outline-none" />
+    const filtered = archivedProducts.filter(p => 
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.skuCode?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="p-8 bg-gray-50 min-h-screen">
+            <BackButton />
+            <h1 className="text-4xl font-bold text-gray-900 mb-8">Archive Management</h1>
+
+            <div className="bg-white rounded-2xl shadow-sm p-8">
+                <div className="relative mb-6 w-full max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                        type="text" 
+                        placeholder="Search archived SKUs..." 
+                        className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg focus:outline-none"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="border-b border-gray-100 text-gray-900 font-bold">
+                            <tr>
+                                <th className="py-4 px-2">SKU Code</th>
+                                <th className="py-4 px-2">Product Name</th>
+                                <th className="py-4 px-2 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filtered.length > 0 ? (
+                             filtered.map(p => (
+                             <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                <td className="py-4 px-2 font-mono text-blue-600 font-bold">{p.skuCode}</td>
+                                <td className="py-4 px-2 text-gray-800">{p.name}</td>
+                                <td className="py-4 px-2 text-center">
+                                <button 
+                                onClick={() => handleRestore(p.id, p.name)}
+                                className="flex items-center mx-auto px-3 py-1 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                                >
+                                <RotateCcw size={16} className="mr-2" /> Undo Archive
+                                </button>
+                                </td>
+                             </tr>
+            ))
+    ) : (
+        <tr>
+            <td colSpan="3" className="py-10 text-center text-gray-400">
+                No archived products found.
+            </td>
+        </tr>
+    )}
+</tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default InventoryHub_Archive;
