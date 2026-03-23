@@ -4,8 +4,8 @@ import {
   Database, AlertCircle, Eye, X, ArrowLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import {jsPDF} from 'jspdf';
+import {autoTable} from 'jspdf-autotable';
 
 const AuditLogs = () => {
   const navigate = useNavigate();

@@ -1,6 +1,8 @@
-import { createBrowserRouter, Outlet } from "react-router-dom";
+import { createBrowserRouter, Outlet, Navigate } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import NotFound from "./components/NotFound";
+import Login from "./components/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // --- Procurement Pages ---
 import ProcurementHub from "./pages/ProcurementHub";
@@ -15,183 +17,203 @@ import RegisterVendor from "./pages/RegisterVendor";
 import VendorAnalytics from "./pages/VendorAnalytics";
 import VendorDirectory from "./pages/VendorDirectory";
 
-// --- Inventory Hub Pages ---
-import InventoryHub from "./pages/InventoryHub";
-import InventoryHub_Register from "./pages/InventoryHub_Register";
-import InventoryHub_Modify from "./pages/InventoryHub_Modify";
-import InventoryHub_Archive from "./pages/InventoryHub_Archive";
-import InventoryHub_Search from "./pages/InventoryHub_Search";
-import InventoryDashboard from "./pages/InventoryDashboard";
-import DashboardContent from "./pages/DashboardContent";
+// --- Inventory Hub Pages (Your Specific Part) ---
+import InventoryHub from "./pages/InventoryHub"; 
+import InventoryHub_Register from "./pages/InventoryHub_Register"; // UC-101
+import InventoryHub_Modify from "./pages/InventoryHub_Modify";     // UC-103
+import InventoryHub_Archive from "./pages/InventoryHub_Archive";   // UC-104
 
-// --- Financial ---
+
+
+// --- Financial Pages ---
 import FinancialLedger from "./pages/FinancialLedger";
 import FinancialReports from "./pages/FinancialReports";
+import InventoryDashboard from "./pages/InventoryDashboard";
+import InventoryHub_Search from "./pages/InventoryHub_Search";
+import DashboardContent from "./pages/DashboardContent";
 
-// --- Sales ---
+// Sales Engine
 import SalesEngine from "./pages/SalesEngine";
 
-// --- Admin ---
+// Placeholder Pages
+import PlaceholderPage from "./components/PlaceholderPage";
+
+// Admin Control
 import AdminControl from "./pages/Admincontrol";
 
-// User management
+//User management
 import UserManagement from "./pages/Usermanagement";
 
-// Audit logs
+//Audit logs
 import AuditLogs from "./pages/Auditlogs";
 
-// Admin operation
+//Admin operation
+
 import AdminOperations from "./pages/Adminoperations";
 
-// Security Access Control
+//Security Access Control
 import SecurityAccessControl from "./pages/Securityaccesscontrol";
+
 
 export const router = createBrowserRouter([
   {
-    path: "/",
+    path: '/login',
+    element: <Login />
+  },
+  {
+    path: '/',
     element: <MainLayout />,
     children: [
+      //{ index: true, element: <Dashboard/>}, // Default route
+      { index: true, element: <Navigate to="/login" replace />}, // Default route redirects to login    
       {
-        path: "inventory",
-        element: <InventoryDashboard />,
+  path: "inventory",
+  element: <InventoryDashboard />,
+  children: [
+    {
+      index: true, // This makes DashboardContent the default view
+      element: <DashboardContent />
+    },
+    {
+      path: "register", // Matches /inventory/register
+      element: <ProtectedRoute allowedRoles={["Inventory Manager"]}><InventoryHub_Register /></ProtectedRoute>
+    },
+    {
+      path: "modify", // Matches /inventory/modify
+      element: <ProtectedRoute allowedRoles={["Inventory Manager"]}><InventoryHub_Modify /></ProtectedRoute>
+    },
+    {
+      path: "archive", // Matches /inventory/archive
+      element: <ProtectedRoute allowedRoles={["Inventory Manager"]}><InventoryHub_Archive /></ProtectedRoute>
+    },
+    {
+      path: "inventoryHub",
+      element: <ProtectedRoute allowedRoles={["Inventory Manager"]}><InventoryHub /></ProtectedRoute>
+    },
+  ]
+},
+      {
+        path:"search",
+        element:<ProtectedRoute allowedRoles={["Inventory Manager"]}><InventoryHub_Search/></ProtectedRoute>
+      },
+
+      // 2. Procurement Module Routes
+      {
+        path: "procurement",
+        element: <ProtectedRoute allowedRoles={["Procurement Officer"]}><ProcurementLayout /></ProtectedRoute>, 
         children: [
           {
             index: true,
-            element: <DashboardContent />
+            element: <ProcurementHub />
           },
           {
-            path: "register",
-            element: <InventoryHub_Register />
+            path: "track-shipments",
+            element: <ProcurementShipment />
           },
           {
-            path: "modify",
-            element: <InventoryHub_Modify />
+            path: "create-purchase-order",
+            element: <ProcurementCreatePurchaseOrder />
           },
           {
-            path: "archive",
-            element: <InventoryHub_Archive />
+            path: "manage-purchase-orders",
+            element: <ProcurementManagePurchaseOrders />
           },
           {
-            path: "inventoryHub",
-            element: <InventoryHub />
+            path: "receive-goods",
+            element: <ProcurementReceiveGoods />
           }
         ]
       },
-      {
-        path: "search",
-        element: <InventoryHub_Search />
-      },
 
-      // Procurement Module Routes
-      {
-        path: "procurement",
-        element: <ProcurementLayout />,
-        children: [
-          { index: true, element: <DashboardContent /> },
-          { path: "register", element: <InventoryHub_Register /> },
-          { path: "modify", element: <InventoryHub_Modify /> },
-          { path: "archive", element: <InventoryHub_Archive /> },
-          { path: "inventoryHub", element: <InventoryHub /> },
-        ]
-      },
-
-      // Financial Module Routes
+      // 3. Financial Module Routes
       {
         path: "financial-ledger",
-        element: <FinancialLedger />
+        element: <ProtectedRoute allowedRoles={["Finance Manager"]}><FinancialLedger /></ProtectedRoute>
       },
       {
         path: "financial-reports",
-        element: <FinancialReports />
+        element: <ProtectedRoute allowedRoles={["Finance Manager"]}><FinancialReports /></ProtectedRoute>
       },
 
-      // Admin Routes
       {
-        path: "admin",
-        element: <AdminControl />
-      },
-      {
-        path: "admin/users",
-        element: <UserManagement />
-      },
-      {
-        path: "admin/audit",
-        element: <AuditLogs />
-      },
-      {
-        path: "admin/operations",
-        element: <AdminOperations />
-      },
-      {
-        path: "admin/security",
-        element: <SecurityAccessControl />
+        path: "admin", // Matches the path in your Sidebar
+        element: <ProtectedRoute allowedRoles={[]}><AdminControl /></ProtectedRoute>
       },
 
-      // Supplier Routes
+      {
+        path: "admin/users", 
+        element: <ProtectedRoute allowedRoles={[]}><UserManagement /></ProtectedRoute>
+      },
+
+      {
+        path: "admin/audit", 
+        element: <ProtectedRoute allowedRoles={[]}><AuditLogs /></ProtectedRoute>
+      },
+
+      {
+        path: "admin/operations", 
+        element: <ProtectedRoute allowedRoles={[]}><AdminOperations /></ProtectedRoute>
+      },
+      {
+        path: "admin/security", 
+        element: <ProtectedRoute allowedRoles={[]}><SecurityAccessControl /></ProtectedRoute>
+      },
+
       {
         path: "supplier",
-        element: (
-          <div className="w-full h-full">
-            <Outlet />
-          </div>
-        ),
+        element: <ProtectedRoute allowedRoles={["Procurement Officer"]}><div className="w-full h-full"><Outlet /></div></ProtectedRoute>, // This allows child routes like /manage to render
         children: [
           {
-            index: true,
+            index: true, // This is /supplier
             element: <SupplierPortal />
           },
           {
-            path: "manage",
+            path: "manage", // This is /supplier/manage
             element: <ManageVendors />
           },
-          {
-            path: "register",
-            element: <RegisterVendor />
+          { path: "register", 
+            element: <RegisterVendor /> 
           },
-          {
-            path: "analytics",
+
+          { path: "analytics", 
             element: <VendorAnalytics />
           },
-          {
-            path: "directory",
-            element: <VendorDirectory />
-          }
+
+          { path: "directory",
+            element: <VendorDirectory /> }
+
         ]
       },
 
-      // Sales
       {
         path: "sales",
-        element: <SalesEngine />
+        element: <ProtectedRoute allowedRoles={["Sales Representative"]}><SalesEngine /></ProtectedRoute>
       },
-
-      // Other Placeholder Pages
+      {
+        path: "inventory",
+        element: <PlaceholderPage title="Inventory Hub" icon="📦" description="Manage your inventory and stock levels" />
+      },
+      {
+        path: "search",
+        element: <PlaceholderPage title="Inventory Search" icon="🔍" description="Search and track inventory items" />
+      },
+      {
+        path: "supplier",
+        element: <PlaceholderPage title="Supplier Portal" icon="👥" description="Collaborate with your suppliers" />
+      },
       {
         path: "audit",
-        element: (
-          <PlaceholderPage
-            title="Audit Trail"
-            icon="📋"
-            description="Monitor system activities and changes"
-          />
-        )
+        element: <PlaceholderPage title="Audit Trail" icon="📋" description="Monitor system activities and changes" />
       },
       {
         path: "user-management",
-        element: (
-          <PlaceholderPage
-            title="System Settings"
-            icon="⚙️"
-            description="Configure system preferences"
-          />
-        )
+        element: <ProtectedRoute allowedRoles={[]}><PlaceholderPage title="System Settings" icon="⚙️" description="Configure system preferences" /></ProtectedRoute>
       },
+      { path: '*', element: <NotFound /> }
 
-      // 404
-      {
-        path: "*",
-        element: <NotFound />
-      }
+      
     ]
   }
+
 ]);
+ 
