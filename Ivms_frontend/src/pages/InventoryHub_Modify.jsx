@@ -1,34 +1,149 @@
-import React from 'react';
-import { ChevronRight, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronRight, Search, Save, Package, List } from 'lucide-react';
+import axios from 'axios';
+import BackButton from "../components/ui/BackButton";
 
 const InventoryHub_Modify = () => {
-  return (
-    <div className="p-10 bg-white min-h-screen">
-      <nav className="flex items-center text-sm text-gray-500 mb-6 font-medium">
-        <span>Inventory Hub</span>
-        <ChevronRight size={16} className="mx-2" />
-        <span className="text-gray-800">Edit SKU</span>
-      </nav>
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState([]); // Fixed: Added missing state
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [newQuantity, setNewQuantity] = useState("");
 
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">Modify Stock & Safety Thresholds</h1>
-      <p className="text-gray-500 text-lg mb-10 font-medium">Adjust stock counts and safety thresholds for inventory management</p>
+    const handleSearch = async () => {
+        if (query.length < 2) return; 
+        try {
+            const res = await axios.get(`http://localhost:8083/api/v1/products/inventory/search?query=${query}`);
+            
+            if (res.data.length > 0) {
+                setResults(res.data); // Now defined!
+                setSelectedProduct(null); // Reset selection to show the list
+            } else {
+                setResults([]);
+                alert("No matches found for that Name or SKU.");
+            }
+        } catch (err) {
+            console.error("Search failed", err);
+            alert("Search failed. Please check your backend connection.");
+        }
+    };
 
-      <div className="border border-gray-100 rounded-2xl p-10 shadow-sm max-w-[100%]">
-        <h2 className="text-lg font-bold text-gray-900 mb-8">SKU Selection</h2>
-        <div>
-          <label className="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-tight">Search Product</label>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Enter SKU ID or Product Name" 
-              className="w-full pl-12 pr-4 py-4 bg-[#f3f4f6] rounded-xl focus:outline-none placeholder-gray-400"
-            />
-          </div>
+    const handleSelectProduct = (product) => {
+        setSelectedProduct(product);
+        setNewQuantity(product.quantity); // Pre-fill the input with current stock
+        setResults([]); // Hide results list after selection
+    };
+
+    const handleUpdate = async () => {
+        try {
+            await axios.put(`http://localhost:8083/api/v1/products/stock/update/${selectedProduct.id}?quantity=${newQuantity}`);
+            
+            alert("Stock Update Processed! RabbitMQ has notified the Procurement listener.");
+            
+            // Clear everything after success
+            setResults([]);
+            setSelectedProduct(null);
+            setQuery("");
+            setNewQuantity("");
+        } catch (err) {
+            alert("Update Error: " + err.message);
+        }
+    };
+
+    return (
+        <div className="p-10 bg-white min-h-screen">
+            <nav className="flex items-center text-sm text-gray-500 mb-6 font-medium">
+                <span>Inventory Hub</span>
+                <ChevronRight size={16} className="mx-2" />
+                <span className="text-gray-800">Edit SKU</span>
+            </nav>
+            <BackButton />
+
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Modify Stock & Safety Thresholds</h1>
+            <p className="text-gray-500 text-lg mb-10 font-medium">Adjust stock counts and safety thresholds for inventory management</p>
+
+            <div className="border border-gray-100 rounded-2xl p-10 shadow-sm max-w-[100%] bg-gray-50">
+                <h2 className="text-lg font-bold text-gray-900 mb-8">SKU Selection</h2>
+                
+                {/* Search Input Group */}
+                <div className="flex gap-4 mb-8">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input 
+                            type="text" 
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                            placeholder="Enter SKU ID or Product Name" 
+                            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <button onClick={handleSearch} className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                        Search
+                    </button>
+                </div>
+
+                {/* 1. Search Results List (Shown when results are found) */}
+                {results.length > 0 && (
+                    <div className="mb-8 bg-white border border-indigo-100 rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2">
+                        <div className="bg-indigo-50 p-4 border-b border-indigo-100 flex items-center text-indigo-700 font-bold">
+                            <List size={18} className="mr-2" />
+                            Select a Product to Edit
+                        </div>
+                        {results.map((product) => (
+                            <div 
+                                key={product.id}
+                                onClick={() => handleSelectProduct(product)}
+                                className="p-5 hover:bg-gray-50 cursor-pointer border-b last:border-0 flex justify-between items-center transition-colors"
+                            >
+                                <div>
+                                    <p className="font-bold text-gray-900">{product.name}</p>
+                                    <p className="text-sm text-gray-500">SKU: {product.skuCode}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-medium text-gray-400">Current Stock</p>
+                                    <p className="font-bold text-indigo-600">{product.quantity}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* 2. Edit Form (Shown after a product is selected) */}
+                {selectedProduct && (
+                    <div className="bg-white p-8 rounded-2xl border border-blue-100 shadow-md animate-in fade-in slide-in-from-top-4">
+                        <div className="flex items-center mb-6 text-blue-600">
+                            <Package size={24} className="mr-2" />
+                            <h3 className="text-xl font-bold">Modifying: {selectedProduct.name} ({selectedProduct.skuCode})</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Adjust Stock Level</label>
+                                <input 
+                                    type="number" 
+                                    value={newQuantity}
+                                    onChange={(e) => setNewQuantity(e.target.value)}
+                                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <p className="mt-2 text-sm text-gray-500">
+                                    Low Stock Threshold: <span className="font-bold text-red-500">{selectedProduct.reorderThreshold} units</span>
+                                </p>
+                            </div>
+                            
+                            <div className="flex items-end">
+                                <button 
+                                    onClick={handleUpdate}
+                                    className="w-full flex items-center justify-center bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg active:scale-95"
+                                >
+                                    <Save size={20} className="mr-2" /> Update & Notify Queue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default InventoryHub_Modify;
