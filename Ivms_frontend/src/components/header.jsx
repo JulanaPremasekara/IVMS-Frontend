@@ -7,17 +7,39 @@ const Header = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Determine role and avatar based on path
-  const isFinancialPage = location.pathname.includes('financial');
-  const role = isFinancialPage ? 'Finance Manager' : 'Procurement Manager';
-  const avatarInitials = isFinancialPage ? 'FM' : 'PM';
+  // Get actual user metadata from session storage
+  const role = localStorage.getItem('userRole') || 'Guest';
+  const userName = localStorage.getItem('userName') || 'User';
+  
+  // Create dynamic initials (e.g. "John Doe" -> "JD")
+  const avatarInitials = userName
+    ? userName.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().substring(0, 2)
+    : '??';
 
-  const handleLogout = () => {
-    // Implement logout logic here (e.g., clear tokens)
-    console.log('Logging out...');
-    // Redirect to login or home
-    // navigate('/login'); 
-    alert('Logged out successfully');
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        const response = await fetch('http://localhost:9090/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        if (response.ok) {
+          console.log("Logged out successfully from session");
+        } else {
+          console.warn("Logout request failed on server side", response.status);
+        }
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      navigate('/login', { replace: true });
+    }
   };
 
   return (
