@@ -10,7 +10,7 @@ import axios from 'axios';
 
 export const savePartialReceipt = async(payload) => {
     try{
-      const response = await axios.post("http://localhost:8081/api/v1/purchaseOrders/partialReceipt", payload);
+      const response = await axios.post("http://localhost:8081/api/v1/purchaseOrders/save-partial", payload);
       return response.data;
     } catch (error) {
       console.error("Error saving partial receipt:", error);
@@ -40,7 +40,7 @@ const ReceiveGoodsVerification = ({ po, items }) => {
         );
 
         return {
-          itemId: item.id,
+          itemId: Number(item.name),
           itemName: item.name,
           orderedQty,
           receivedQty,
