@@ -24,7 +24,7 @@ const UserManagement = () => {
       try {
         setLoading(true);
         setError(null);
-        const res = await axios.get('http://localhost:8080/api/admin/users');
+        const res = await axios.get('http://localhost:8082/api/admin/users');
         setUsers(res.data || []);
       } catch (err) {
         console.error("Failed to load users:", err);
@@ -55,7 +55,7 @@ const UserManagement = () => {
     if (!selectedUser?.id) return;
 
     try {
-      await axios.delete(`http://localhost:8080/api/admin/users/${selectedUser.id}`);
+      await axios.delete(`http://localhost:8082/api/admin/users/${selectedUser.id}`);
       setUsers(prev => prev.filter(u => u.id !== selectedUser.id));
       setShowDeleteModal(false);
       setSelectedUser(null);
@@ -78,7 +78,7 @@ const UserManagement = () => {
   if (error) return (
     <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-xl mx-auto max-w-4xl">
       <p className="font-medium">{error}</p>
-      <p className="text-sm mt-2">Make sure backend is running on http://localhost:8080</p>
+      <p className="text-sm mt-2">Make sure backend is running on http://localhost:8082</p>
     </div>
   );
 

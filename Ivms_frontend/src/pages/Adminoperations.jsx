@@ -29,7 +29,7 @@ const AdminOperations = () => {
     setLoadingWarehouses(true);
     setFormError('');
     try {
-      const res = await fetch('http://localhost:8080/api/admin/warehouses');
+      const res = await fetch('http://localhost:8082/api/admin/warehouses');
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`Failed to load warehouses: ${res.status} - ${errorText}`);
@@ -57,7 +57,7 @@ const AdminOperations = () => {
 
     const timeout = setTimeout(async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/products/search?q=${encodeURIComponent(productSearch)}`);
+        const res = await fetch(`http://localhost:8082/api/admin/products/search?q=${encodeURIComponent(productSearch)}`);
         if (!res.ok) throw new Error('Failed to search products');
         const data = await res.json();
         setSearchResults(data);
@@ -79,7 +79,7 @@ const AdminOperations = () => {
 
     const fetchStock = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/stock?product=${selectedProduct.id}&warehouse=${sourceWarehouse}`);
+        const res = await fetch(`http://localhost:8082/api/admin/stock?product=${selectedProduct.id}&warehouse=${sourceWarehouse}`);
         if (!res.ok) throw new Error('Failed to fetch stock');
         const data = await res.json();
         setAvailableStock(data.quantity);
@@ -118,7 +118,7 @@ const AdminOperations = () => {
     };
 
     try {
-      const res = await fetch('http://localhost:8080/api/admin/transfers', {
+      const res = await fetch('http://localhost:8082/api/admin/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -23,7 +23,7 @@ const SecurityAccessControl = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const res = await fetch('http://localhost:8080/api/admin/users');
+        const res = await fetch('http://localhost:8082/api/admin/users');
         if (!res.ok) {
           throw new Error(`Failed to load users: ${res.status}`);
         }
@@ -72,7 +72,7 @@ const SecurityAccessControl = () => {
       else if (action === 'activate') endpoint = `/api/admin/users/${userId}/activate`;
       else if (action === 'archive') endpoint = `/api/admin/users/${userId}/archive`;
 
-      const res = await fetch(`http://localhost:8080${endpoint}`, {
+      const res = await fetch(`http://localhost:8082${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -94,7 +94,7 @@ const SecurityAccessControl = () => {
       alert(`User successfully ${action}d!`);
 
       // Refresh users
-      const updatedRes = await fetch('http://localhost:8080/api/admin/users');
+      const updatedRes = await fetch('http://localhost:8082/api/admin/users');
       if (!updatedRes.ok) {
         throw new Error(`Failed to refresh users: ${updatedRes.status}`);
       }
@@ -136,7 +136,7 @@ const SecurityAccessControl = () => {
     setSavingPermissions(true);
 
     try {
-      const res = await fetch(`http://localhost:8080/api/admin/users/${selectedUser.id}/permissions`, {
+      const res = await fetch(`http://localhost:8082/api/admin/users/${selectedUser.id}/permissions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Array.from(localPermissions)),
@@ -150,7 +150,7 @@ const SecurityAccessControl = () => {
       alert('Permissions updated successfully!');
 
       // Refresh selected user data
-      const updatedRes = await fetch(`http://localhost:8080/api/admin/users/${selectedUser.id}`);
+      const updatedRes = await fetch(`http://localhost:8082/api/admin/users/${selectedUser.id}`);
       if (!updatedRes.ok) {
         throw new Error(`Failed to refresh user: ${updatedRes.status}`);
       }

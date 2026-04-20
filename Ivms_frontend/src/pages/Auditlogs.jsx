@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   History, Search, RefreshCw, Download, Filter, Calendar, User,
-  Database, AlertCircle, Eye, X, ArrowLeft,
+  AlertCircle, Eye, X, ArrowLeft,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
@@ -27,7 +27,7 @@ const AuditLogs = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:8080/api/admin/audit/logs', {
+        const response = await fetch('http://localhost:8082/api/admin/audit/logs', {
           method: 'GET',
           headers: { 'Accept': 'application/json' },
         });
@@ -86,8 +86,8 @@ const AuditLogs = () => {
 
   const getStatusStyle = (status) => {
     return status === 'Flagged'
-      ? 'text-rose-700 font-bold'
-      : 'text-emerald-700 font-medium';
+      ? 'bg-rose-50 text-rose-600 border-rose-100'
+      : 'bg-emerald-50 text-emerald-600 border-emerald-100';
   };
 
   const formatTimestamp = (ts) => {
@@ -173,65 +173,137 @@ const AuditLogs = () => {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-[1600px] mx-auto">
+    <div className="space-y-6 relative">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/admin')} className="flex items-center gap-2 px-5 py-2.5 bg-white border ...">
-            <ArrowLeft size={16} /> Back
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">System Audit Logs</h1>
-            <p className="text-slate-500 text-sm mt-1">Track system activities</p>
+      {/* Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setSelectedLog(null)}>
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+          <div className="relative bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#1e3a8a] p-6 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 rounded-lg"><History size={20} /></div>
+                <h3 className="font-bold text-lg tracking-tight">Audit Log Details</h3>
+              </div>
+              <button onClick={() => setSelectedLog(null)} className="p-1 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+
+            <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+              <AuditDetailItem label="Timestamp" value={formatTimestamp(selectedLog.timestamp)} fullWidth />
+              <AuditDetailItem label="User" value={selectedLog.user || '—'} />
+              <AuditDetailItem label="User ID" value={selectedLog.userId || '—'} highlight />
+              <AuditDetailItem label="Module" value={selectedLog.module || '—'} />
+              <AuditDetailItem label="Action" value={selectedLog.action || '—'} />
+              <AuditDetailItem label="Entity" value={selectedLog.entity || '—'} fullWidth mono highlight />
+              <div className="col-span-1 sm:col-span-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Status</label>
+                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase border ${getStatusStyle(selectedLog.status)}`}>
+                  {selectedLog.status || 'Normal'}
+                </span>
+              </div>
+            </div>
+
+            <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button onClick={() => setSelectedLog(null)} className="px-6 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-100 transition-all">
+                Close Details
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 ...">
-            <RefreshCw size={16} /> Refresh
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div>
+          <button
+            onClick={() => navigate('/admin')}
+            className="flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700 mb-2 border border-blue-200 px-3 py-1 rounded-md bg-blue-50/50"
+          >
+            <ArrowLeft size={14} /> Back to Admin Control
           </button>
-          <button onClick={exportToPDF} disabled={filteredLogs.length === 0} className={`... ${filteredLogs.length === 0 ? 'bg-gray-300' : 'bg-blue-700 text-white'}`}>
-            <Download size={16} /> Export PDF
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-800">System Audit Logs</h1>
+            <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase">Compliance</span>
+          </div>
+          <p className="text-slate-500 text-sm mt-1">Track system activities, user actions, and module-level changes.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all"
+          >
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <button
+            onClick={exportToPDF}
+            disabled={filteredLogs.length === 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              filteredLogs.length === 0
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-[#1e3a8a] text-white hover:bg-blue-900 shadow-lg shadow-blue-100'
+            }`}
+          >
+            <Download size={14} /> Export PDF
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border shadow-sm">
-        <div className="px-6 py-4 border-b bg-slate-50 flex items-center gap-2 text-blue-700">
-          <Filter size={18} />
-          <h3 className="text-base font-bold">Filter Audit Logs</h3>
+      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter size={16} className="text-blue-600" />
+          <h3 className="text-sm font-bold text-slate-800">Filter Audit Logs</h3>
         </div>
-        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-              <Calendar size={14} /> Date From
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+              <Calendar size={12} /> Date From
             </label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full p-2.5 border rounded-lg" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+            />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-              <Calendar size={14} /> Date To
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+              <Calendar size={12} /> Date To
             </label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full p-2.5 border rounded-lg" />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+            />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-              <User size={14} /> User
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+              <User size={12} /> User
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input type="text" placeholder="Name or ID..." value={userSearch} onChange={e => setUserSearch(e.target.value)}
-                     className="w-full pl-10 pr-4 py-2.5 border rounded-lg" />
+              <input
+                type="text"
+                placeholder="Name or user ID..."
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+              />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase">Action Type</label>
-            <select value={actionType} onChange={e => setActionType(e.target.value)} className="w-full p-2.5 border rounded-lg">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Action Type</label>
+            <select
+              value={actionType}
+              onChange={e => setActionType(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+            >
               <option>All actions</option>
               <option>CREATE</option>
               <option>UPDATE</option>
@@ -241,9 +313,13 @@ const AuditLogs = () => {
             </select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase">Module</label>
-            <select value={moduleFilter} onChange={e => setModuleFilter(e.target.value)} className="w-full p-2.5 border rounded-lg">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Module</label>
+            <select
+              value={moduleFilter}
+              onChange={e => setModuleFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100"
+            >
               <option>All modules</option>
               <option>Inventory</option>
               <option>Procurement</option>
@@ -252,125 +328,98 @@ const AuditLogs = () => {
               <option>User</option>
             </select>
           </div>
-
         </div>
-        <div className="px-6 py-4 border-t bg-slate-50 flex justify-end gap-3">
-          <button onClick={resetFilters} className="px-6 py-2 border rounded-lg">Reset</button>
-          <button onClick={applyFilters} className="px-6 py-2 bg-blue-700 text-white rounded-lg">Apply Filters</button>
+
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
+          <button
+            onClick={resetFilters}
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all"
+          >
+            Reset Filters
+          </button>
+          <button
+            onClick={applyFilters}
+            className="px-4 py-2 bg-[#1e3a8a] text-white rounded-lg text-xs font-bold hover:bg-blue-900 transition-all shadow-lg shadow-blue-100"
+          >
+            Apply Filters
+          </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Database size={18} className="text-slate-500" />
-            <h3 className="text-base font-bold text-slate-800">Audit Log Results</h3>
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-blue-600" />
+            <h3 className="text-sm font-bold text-slate-800">Audit Log Results</h3>
           </div>
-          <span className="bg-slate-800 text-white text-xs px-3 py-1 rounded font-bold">
+          <span className="bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase">
             {filteredLogs.length} Records
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 uppercase text-xs font-bold border-b">
-                <th className="px-5 py-3.5">Timestamp</th>
-                <th className="px-5 py-3.5">User</th>
-                <th className="px-5 py-3.5">Module</th>
-                <th className="px-5 py-3.5">Action</th>
-                <th className="px-5 py-3.5">Entity</th>
-                <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredLogs.map((log, idx) => (
-                <tr key={log.id || idx} className="text-sm hover:bg-slate-50">
-                  <td className="px-5 py-4 text-slate-600 font-medium">{formatTimestamp(log.timestamp)}</td>
-                  <td className="px-5 py-4">
-                    <div className="font-semibold text-slate-800">{log.user || '—'}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{log.userId || '—'}</div>
-                  </td>
-                  <td className="px-5 py-4">{log.module || '—'}</td>
-                  <td className="px-5 py-4 text-slate-700">{log.action || '—'}</td>
-                  <td className="px-5 py-4 font-mono text-blue-600">{log.entity || '—'}</td>
-                  <td className={`px-5 py-4 ${getStatusStyle(log.status)} uppercase font-semibold text-xs`}>
-                    {log.status || 'Normal'}
-                  </td>
-                  <td className="px-5 py-4 text-center">
-                    <button onClick={() => setSelectedLog(log)} className="text-blue-600 hover:text-blue-800">
-                      <Eye size={14} /> Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredLogs.length === 0 && (
+        {filteredLogs.length === 0 ? (
           <div className="py-16 text-center text-slate-500">No matching audit logs found.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[980px]">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-400 uppercase text-[10px] font-bold">
+                  <th className="px-6 py-4">Timestamp</th>
+                  <th className="px-6 py-4">User</th>
+                  <th className="px-6 py-4">Module</th>
+                  <th className="px-6 py-4">Action</th>
+                  <th className="px-6 py-4">Entity</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredLogs.map((log, idx) => (
+                  <tr key={log.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 text-xs font-medium text-slate-600">{formatTimestamp(log.timestamp)}</td>
+                    <td className="px-6 py-4">
+                      <div className="text-xs font-bold text-slate-700">{log.user || '—'}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{log.userId || '—'}</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">{log.module || '—'}</td>
+                    <td className="px-6 py-4 text-xs text-slate-500 font-semibold">{log.action || '—'}</td>
+                    <td className="px-6 py-4 text-xs font-mono text-blue-600">{log.entity || '—'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${getStatusStyle(log.status)}`}>
+                        {log.status || 'Normal'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center">
+                        <button
+                          onClick={() => setSelectedLog(log)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 border border-slate-100 rounded hover:bg-white transition-all shadow-sm"
+                          aria-label="View audit details"
+                          title="View details"
+                        >
+                          <Eye size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
-
-      {/* Detail Modal */}
-      {selectedLog && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedLog(null)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-bold flex items-center gap-3">
-                <Eye size={20} className="text-blue-600" />
-                Audit Log — {selectedLog.entity || '—'}
-              </h2>
-              <button onClick={() => setSelectedLog(null)}><X size={20} /></button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">Timestamp</label>
-                  <p className="mt-1 font-medium">{formatTimestamp(selectedLog.timestamp)}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">User</label>
-                  <p className="mt-1">
-                    <span className="font-semibold">{selectedLog.user || '—'}</span>
-                    <span className="text-slate-500 text-sm ml-2">({selectedLog.userId || '—'})</span>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">Module</label>
-                  <p className="mt-1 font-medium">{selectedLog.module || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">Action</label>
-                  <p className="mt-1 font-medium">{selectedLog.action || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">Entity</label>
-                  <p className="mt-1 font-mono text-blue-600">{selectedLog.entity || '—'}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
-                  <p className={`mt-1 font-semibold uppercase ${getStatusStyle(selectedLog.status)}`}>
-                    {selectedLog.status || 'Normal'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t bg-slate-50 flex justify-end">
-              <button onClick={() => setSelectedLog(null)} className="px-6 py-2.5 bg-slate-700 text-white rounded-lg">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
+const AuditDetailItem = ({ label, value, fullWidth, highlight, mono }) => (
+  <div className={fullWidth ? 'col-span-1 sm:col-span-2' : 'col-span-1'}>
+    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{label}</label>
+    <p className={`text-sm font-semibold ${mono ? 'font-mono' : ''} ${highlight ? 'text-blue-600' : 'text-slate-700'}`}>
+      {value || '—'}
+    </p>
+  </div>
+);
 
 export default AuditLogs;
