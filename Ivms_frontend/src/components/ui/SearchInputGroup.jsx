@@ -14,11 +14,6 @@ export const SearchInputGroup = ({ placeholder, onSearch }) => (
     <button className="bg-[#1e3a8a] text-white px-8 py-3 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-900 transition-all shadow-md">
       <Search className="w-4 h-4" /> Search
     </button>
-    <button className="bg-white border border-slate-200 p-3 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 text-slate-600 font-bold text-xs">
-      <ScanLine className="w-5 h-5 text-blue-600" /> Scan
-    </button>
-    <button className="bg-white border border-slate-200 p-3 rounded-xl hover:bg-slate-50 transition-all">
-      <Mic className="w-5 h-5 text-blue-600" />
-    </button>
+    
   </div>
 );
